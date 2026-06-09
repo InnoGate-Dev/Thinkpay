@@ -33,5 +33,5 @@ final routes = <String, WidgetBuilder>{
   '/startup': (context) => StartupScreen(),
   '/signup': (context) => const SignUp(),
   '/login': (context) => const Login(),
-  '/forgetpass': (context) => const ForegetPassword(),
+  '/forgetpass': (context) => const ForgotPassword(),
 };
