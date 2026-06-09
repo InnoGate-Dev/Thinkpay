@@ -1,4 +1,5 @@
 import 'package:Thinkpay/ui/pages/Splash_screen.dart';
+import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
 import 'package:Thinkpay/ui/pages/auth/signup.dart';
 import 'package:Thinkpay/ui/pages/startupScreen.dart';
@@ -32,4 +33,5 @@ final routes = <String, WidgetBuilder>{
   '/startup': (context) => StartupScreen(),
   '/signup': (context) => const SignUp(),
   '/login': (context) => const Login(),
+  '/forgetpass': (context) => const ForegetPassword(),
 };
