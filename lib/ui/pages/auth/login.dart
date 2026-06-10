@@ -56,13 +56,9 @@ class _LoginState extends State<Login> {
               _LogoRow(),
 
               const SizedBox(height: 32),
-
-              // ── Welcome tag ───────────────────────────────────────
               _WelcomeTag(),
 
               const SizedBox(height: 14),
-
-              // ── Headline ──────────────────────────────────────────
               RichText(
                 text: const TextSpan(
                   style: TextStyle(
