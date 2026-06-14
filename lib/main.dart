@@ -1,5 +1,7 @@
-import 'package:Thinkpay/ui/Budget/budget.dart';
+import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/constant/theme_provider.dart';
 import 'package:Thinkpay/ui/component/navbar.dart';
+import 'package:Thinkpay/ui/pages/Budget/budget.dart';
 import 'package:Thinkpay/ui/pages/Splash_screen.dart';
 import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
@@ -20,21 +22,29 @@ class ThinkPay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ThinkPay',
-      debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
-      routes: routes,
+    return ListenableBuilder(
+      listenable: ThemeNotifier(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'ThinkPay',
+          debugShowCheckedModeBanner: false,
+          theme:      AppTheme.light(),
+          darkTheme:  AppTheme.dark(),
+          themeMode:  ThemeNotifier().mode,
+          home: const SplashScreen(),
+          routes: routes,
+        );
+      },
     );
   }
 }
 
 final routes = <String, WidgetBuilder>{
-  '/startup': (context) => StartupScreen(),
-  '/signup': (context) => const SignUp(),
-  '/login': (context) => const Login(),
-  '/forgetpass': (context) => const ForgotPassword(),
-  '/home': (context) => const AppShell(),
-  '/notification' : (context) => NotificationPage(),
-  '/budget' : (context) => BudgetPage(),
+  '/startup':      (context) => StartupScreen(),
+  '/signup':       (context) => const SignUp(),
+  '/login':        (context) => const Login(),
+  '/forgetpass':   (context) => const ForgotPassword(),
+  '/home':         (context) => const AppShell(),
+  '/notification': (context) => NotificationPage(),
+  '/budget':       (context) => BudgetPage(),
 };
