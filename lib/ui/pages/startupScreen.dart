@@ -81,7 +81,7 @@ class _StartupScreenState extends State<StartupScreen>
   }
 
   void _onSignIn() {
-    Navigator.of(context).pushNamed('/signin');
+    Navigator.of(context).pushNamed('/login');
   }
 
   @override
