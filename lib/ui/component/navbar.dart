@@ -7,6 +7,9 @@ import 'package:Thinkpay/ui/pages/profile/Profile.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 import '../pages/Budget/budget.dart';
 
+/// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
+final drawerOpenNotifier = ValueNotifier<bool>(false);
+
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.initialIndex = 0});
   final int initialIndex;
@@ -73,9 +76,23 @@ class _AppShellState extends State<AppShell>
           children: _pages,
         ),
       ),
-      bottomNavigationBar: _ThinkPayNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
+      bottomNavigationBar: ValueListenableBuilder<bool>(
+        valueListenable: drawerOpenNotifier,
+        builder: (context, drawerOpen, _) {
+          return AnimatedSlide(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            offset: drawerOpen ? const Offset(0, 1) : Offset.zero,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: drawerOpen ? 0.0 : 1.0,
+              child: _ThinkPayNavBar(
+                currentIndex: _currentIndex,
+                onTap: _onTabTapped,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -111,7 +128,7 @@ class _ThinkPayNavBar extends StatelessWidget {
               _RegularTab(icon: Icons.pie_chart_outline,     activeIcon: Icons.pie_chart,            label: 'Budget',       index: 1, current: currentIndex, onTap: onTap, tc: tc),
               _AiChatFab(isActive: currentIndex == 2, onTap: () => onTap(2), tc: tc),
               _RegularTab(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long,         label: 'Transactions', index: 3, current: currentIndex, onTap: onTap, tc: tc),
-              _RegularTab(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded,      label: 'Profile',      index: 4, current: currentIndex, onTap: onTap, tc: tc),
+              _RegularTab(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded,      label: 'Goal',      index: 4, current: currentIndex, onTap: onTap, tc: tc),
             ],
           ),
         ),
