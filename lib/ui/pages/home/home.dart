@@ -3,6 +3,7 @@ import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
+import 'package:Thinkpay/ui/component/navbar.dart' show drawerOpenNotifier;
 
 import 'drawersection.dart';
 
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: tc.background,
+          onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
           appBar: AppBar(
             leading: Builder(builder: (context){
               return IconButton(onPressed: (){
