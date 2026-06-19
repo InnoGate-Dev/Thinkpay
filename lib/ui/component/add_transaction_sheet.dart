@@ -156,7 +156,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             _Field(
                 controller: _amountCtrl,
                 hint: '0.00',
-                icon: Icons.currency_rupee_rounded,
+                icon: Icons.money,
                 keyboardType: TextInputType.number,
                 tc: tc),
             const SizedBox(height: 14),
