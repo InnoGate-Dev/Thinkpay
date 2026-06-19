@@ -6,10 +6,22 @@ class BudgetCategory {
   final double expectedAmount;
   final TransactionType type;
 
-  const BudgetCategory({
+  BudgetCategory({
     required this.id,
     required this.name,
     required this.expectedAmount,
     required this.type,
   });
+
+  BudgetCategory copyWith({
+    String? name,
+    double? expectedAmount,
+    TransactionType? type,
+  }) =>
+      BudgetCategory(
+        id: id,
+        name: name ?? this.name,
+        expectedAmount: expectedAmount ?? this.expectedAmount,
+        type: type ?? this.type,
+      );
 }
