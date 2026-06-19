@@ -28,12 +28,7 @@ class _SetGoalPageState extends State<SetGoalPage>
     super.dispose();
   }
 
-  void _openAddGoal() => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => const AddGoalSheet(),
-      );
+
 
   @override
   Widget build(BuildContext context) {
@@ -53,17 +48,6 @@ class _SetGoalPageState extends State<SetGoalPage>
 
         return Scaffold(
           backgroundColor: tc.background,
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _openAddGoal,
-            backgroundColor: tc.lime,
-            foregroundColor: tc.background,
-            elevation: 4,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text(
-              'New Goal',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,6 +368,15 @@ class _GoalCard extends StatelessWidget {
     );
   }
 
+  void _editGoal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddGoalSheet(existing: goal),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final days = _daysLeft;
@@ -483,6 +476,7 @@ class _GoalCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       onSelected: (v) {
                         if (v == 'add') _openAddAmount(context);
+                        if (v == 'edit') _editGoal(context);
                         if (v == 'delete') _deleteGoal(context);
                       },
                       itemBuilder: (_) => [
@@ -495,6 +489,14 @@ class _GoalCard extends StatelessWidget {
                               Text('Add Amount', style: TextStyle(color: tc.text100)),
                             ]),
                           ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(children: [
+                            Icon(Icons.edit_outlined, color: _accentColor, size: 18),
+                            const SizedBox(width: 8),
+                            Text('Edit Goal', style: TextStyle(color: tc.text100)),
+                          ]),
+                        ),
                         PopupMenuItem(
                           value: 'delete',
                           child: Row(children: [

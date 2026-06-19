@@ -29,12 +29,7 @@ class _TransectionState extends State<Transection> {
     super.dispose();
   }
 
-  void _openAdd() => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => const AddTransactionSheet(),
-      );
+
 
   @override
   Widget build(BuildContext context) {
@@ -71,12 +66,6 @@ class _TransectionState extends State<Transection> {
                   fontSize: 18,
                   fontWeight: FontWeight.w700),
             ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: _openAdd,
-            backgroundColor: tc.lime,
-            foregroundColor: tc.background,
-            child: const Icon(Icons.add_rounded, size: 28),
           ),
           body: Column(
             children: [

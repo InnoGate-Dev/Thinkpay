@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/chat_message_model.dart';
+import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 
 class FinanceProvider extends ChangeNotifier {
@@ -15,11 +16,13 @@ class FinanceProvider extends ChangeNotifier {
   final List<TransactionModel> _transactions = [];
   final List<BudgetCategory>   _budgets      = [];
   final List<ChatMessage>      _messages     = [];
+  final List<GoalModel>        _goals        = [];
 
   // ── Public accessors ───────────────────────────────────────────────────────
   List<TransactionModel> get transactions => List.unmodifiable(_transactions);
   List<BudgetCategory>   get budgets      => List.unmodifiable(_budgets);
   List<ChatMessage>      get messages     => List.unmodifiable(_messages);
+  List<GoalModel>        get goals        => List.unmodifiable(_goals);
 
   // ── Computed ───────────────────────────────────────────────────────────────
   double get totalIncome =>
@@ -51,6 +54,20 @@ class FinanceProvider extends ChangeNotifier {
   List<TransactionModel> get recentTransactions =>
       _transactions.take(5).toList();
 
+  /// Names of budget categories for expense type (used by transaction picker).
+  List<String> get expenseBudgetCategories =>
+      _budgets
+          .where((b) => b.type == TransactionType.expense)
+          .map((b) => b.name)
+          .toList();
+
+  /// Names of budget categories for income type (used by transaction picker).
+  List<String> get incomeBudgetCategories =>
+      _budgets
+          .where((b) => b.type == TransactionType.income)
+          .map((b) => b.name)
+          .toList();
+
   // ── Mutations ──────────────────────────────────────────────────────────────
   void addTransaction(TransactionModel t) {
     _transactions.insert(0, t);
@@ -67,6 +84,14 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateBudget(BudgetCategory updated) {
+    final idx = _budgets.indexWhere((b) => b.id == updated.id);
+    if (idx != -1) {
+      _budgets[idx] = updated;
+      notifyListeners();
+    }
+  }
+
   void deleteBudget(String id) {
     _budgets.removeWhere((c) => c.id == id);
     notifyListeners();
@@ -75,6 +100,36 @@ class FinanceProvider extends ChangeNotifier {
   void addMessage(ChatMessage m) {
     _messages.add(m);
     notifyListeners();
+  }
+
+  // ── Goal mutations ─────────────────────────────────────────────────────────
+  void addGoal(GoalModel g) {
+    _goals.add(g);
+    notifyListeners();
+  }
+
+  void updateGoal(GoalModel updated) {
+    final idx = _goals.indexWhere((g) => g.id == updated.id);
+    if (idx != -1) {
+      // Preserve the current savedAmount when editing
+      _goals[idx] = updated.copyWith(savedAmount: _goals[idx].savedAmount);
+      notifyListeners();
+    }
+  }
+
+  void deleteGoal(String id) {
+    _goals.removeWhere((g) => g.id == id);
+    notifyListeners();
+  }
+
+  /// Contribute [amount] towards a goal.  Returns true if goal is now complete.
+  bool addAmountToGoal(String id, double amount) {
+    final idx = _goals.indexWhere((g) => g.id == id);
+    if (idx == -1) return false;
+    _goals[idx].savedAmount =
+        (_goals[idx].savedAmount + amount).clamp(0, _goals[idx].targetAmount);
+    notifyListeners();
+    return _goals[idx].isCompleted;
   }
 
   String newId() => DateTime.now().millisecondsSinceEpoch.toString();
@@ -110,5 +165,35 @@ class FinanceProvider extends ChangeNotifier {
       isUser: false,
       timestamp: now,
     ));
+
+    _goals.addAll([
+      GoalModel(
+        id: 'g1',
+        name: 'Emergency Fund',
+        type: GoalType.savings,
+        targetAmount: 50000,
+        savedAmount: 32000,
+        createdAt: now.subtract(const Duration(days: 60)),
+        targetDate: now.add(const Duration(days: 90)),
+      ),
+      GoalModel(
+        id: 'g2',
+        name: 'New Laptop',
+        type: GoalType.savings,
+        targetAmount: 120000,
+        savedAmount: 45000,
+        createdAt: now.subtract(const Duration(days: 30)),
+        targetDate: now.add(const Duration(days: 180)),
+      ),
+      GoalModel(
+        id: 'g3',
+        name: 'Stock Portfolio',
+        type: GoalType.investment,
+        targetAmount: 200000,
+        savedAmount: 80000,
+        createdAt: now.subtract(const Duration(days: 120)),
+        targetDate: now.add(const Duration(days: 365)),
+      ),
+    ]);
   }
 }

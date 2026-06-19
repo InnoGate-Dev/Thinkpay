@@ -5,7 +5,17 @@ import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
 class AddBudgetSheet extends StatefulWidget {
-  const AddBudgetSheet({super.key});
+  const AddBudgetSheet({
+    super.key,
+    this.existing,
+    this.initialType,
+  });
+
+  /// When provided, the sheet opens in edit mode pre-filled with this category.
+  final BudgetCategory? existing;
+
+  /// Pre-selects this type when creating a new category (ignored if [existing] is set).
+  final TransactionType? initialType;
 
   @override
   State<AddBudgetSheet> createState() => _AddBudgetSheetState();
@@ -14,7 +24,21 @@ class AddBudgetSheet extends StatefulWidget {
 class _AddBudgetSheetState extends State<AddBudgetSheet> {
   final _nameCtrl   = TextEditingController();
   final _amountCtrl = TextEditingController();
-  TransactionType _type = TransactionType.expense;
+  late TransactionType _type;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      _nameCtrl.text   = widget.existing!.name;
+      _amountCtrl.text = widget.existing!.expectedAmount.toStringAsFixed(0);
+      _type            = widget.existing!.type;
+    } else {
+      _type = widget.initialType ?? TransactionType.expense;
+    }
+  }
 
   @override
   void dispose() {
@@ -38,13 +62,22 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       return;
     }
 
-    // Mutate provider first, then close
-    FinanceProvider().addBudget(BudgetCategory(
-      id:             FinanceProvider().newId(),
-      name:           name,
-      expectedAmount: amount,
-      type:           _type,
-    ));
+    final provider = FinanceProvider();
+
+    if (_isEditing) {
+      provider.updateBudget(widget.existing!.copyWith(
+        name:           name,
+        expectedAmount: amount,
+        type:           _type,
+      ));
+    } else {
+      provider.addBudget(BudgetCategory(
+        id:             provider.newId(),
+        name:           name,
+        expectedAmount: amount,
+        type:           _type,
+      ));
+    }
 
     if (mounted) Navigator.pop(context);
   }
@@ -64,6 +97,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Handle ──────────────────────────────────────────────────────
           Center(
             child: Container(
               width: 40, height: 4,
@@ -73,16 +107,25 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             ),
           ),
           const SizedBox(height: 20),
+
+          // ── Title ───────────────────────────────────────────────────────
           Text(
-            'Add Budget Category',
+            _isEditing ? 'Edit Budget Category' : 'Add Budget Category',
             style: TextStyle(
                 color: tc.text100,
                 fontSize: 20,
                 fontWeight: FontWeight.w700),
           ),
+          if (_isEditing) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Update the details for this category.',
+              style: TextStyle(color: tc.text40, fontSize: 13),
+            ),
+          ],
           const SizedBox(height: 20),
 
-          // Type toggle
+          // ── Type toggle ──────────────────────────────────────────────────
           Container(
             decoration: BoxDecoration(
                 color: tc.surface2,
@@ -129,15 +172,16 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             child: ElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: tc.lime,
+                backgroundColor: _type == TransactionType.expense ? tc.red : tc.lime,
                 foregroundColor: tc.background,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Create Budget',
-                  style:
-                      TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              child: Text(
+                _isEditing ? 'Save Changes' : 'Create Budget',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],

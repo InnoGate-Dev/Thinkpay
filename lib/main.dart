@@ -6,7 +6,12 @@ import 'package:Thinkpay/ui/pages/Splash_screen.dart';
 import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
 import 'package:Thinkpay/ui/pages/auth/signup.dart';
+import 'package:Thinkpay/ui/pages/goal/Goal.dart';
+import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
+import 'package:Thinkpay/ui/pages/profile/Profile.dart';
+import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/startupScreen.dart';
+import 'package:Thinkpay/ui/pages/support/support.dart';
 import 'package:Thinkpay/ui/pages/Notification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -40,11 +45,16 @@ class ThinkPay extends StatelessWidget {
 }
 
 final routes = <String, WidgetBuilder>{
-  '/startup':      (context) => StartupScreen(),
-  '/signup':       (context) => const SignUp(),
-  '/login':        (context) => const Login(),
-  '/forgetpass':   (context) => const ForgotPassword(),
-  '/home':         (context) => const AppShell(),
-  '/notification': (context) => NotificationPage(),
-  '/budget':       (context) => BudgetPage(),
+  '/startup':     (context) => StartupScreen(),
+  '/signup':      (context) => const SignUp(),
+  '/login':       (context) => const Login(),
+  '/forgetpass':  (context) => const ForgotPassword(),
+  '/home':        (context) => const AppShell(),
+  '/notification':(context) => NotificationPage(),
+  '/budget':      (context) => BudgetPage(),
+  '/goal':        (context) => const SetGoalPage(),
+  '/profile':     (context) => const Profile(),
+  '/editprofile': (context) => const EditProfilePage(),
+  '/security':    (context) => const SecurityPage(),
+  '/support':     (context) => const SupportPage(),
 };

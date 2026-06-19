@@ -19,7 +19,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   String?         _category;
   DateTime        _date     = DateTime.now();
 
-  List<String> get _categories => categoriesFor(_type);
+  /// Categories are sourced exclusively from budget entries.
+  List<String> get _categories => _type == TransactionType.income
+      ? FinanceProvider().incomeBudgetCategories
+      : FinanceProvider().expenseBudgetCategories;
 
   @override
   void dispose() {
@@ -66,7 +69,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       return;
     }
 
-    // Mutate provider first, then close
     FinanceProvider().addTransaction(TransactionModel(
       id:       FinanceProvider().newId(),
       title:    title,
@@ -84,6 +86,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Widget build(BuildContext context) {
     final tc          = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final cats        = _categories;
+    final hasCategories = cats.isNotEmpty;
+    final accentColor   = _type == TransactionType.expense ? tc.red : tc.lime;
 
     return Container(
       decoration: BoxDecoration(
@@ -156,7 +161,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 tc: tc),
             const SizedBox(height: 14),
 
-            // ── Title
+            // ── Transaction Title
             _Label('Title', tc),
             const SizedBox(height: 6),
             _Field(
@@ -166,33 +171,58 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 tc: tc),
             const SizedBox(height: 14),
 
-            // ── Category
+            // ── Category (from Budget section)
             _Label('Category', tc),
             const SizedBox(height: 6),
-            Container(
-              decoration: BoxDecoration(
-                color: tc.surface2,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: tc.border),
+            if (!hasCategories) ...[
+              // Empty-state when no budget categories exist for this type
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: tc.surface2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: accentColor.withValues(alpha: 0.3)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: accentColor, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No categories — add one in the Budget section first.',
+                      style: TextStyle(color: tc.text40, fontSize: 13),
+                    ),
+                  ),
+                ]),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _category,
-                  hint: Text('Select category',
-                      style:
-                          TextStyle(color: tc.text40, fontSize: 14)),
-                  dropdownColor: tc.surface2,
-                  isExpanded: true,
-                  style: TextStyle(color: tc.text100, fontSize: 14),
-                  iconEnabledColor: tc.text40,
-                  items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _category = v),
+            ] else ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: tc.surface2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: tc.border),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _category,
+                    hint: Text('Select category',
+                        style:
+                            TextStyle(color: tc.text40, fontSize: 14)),
+                    dropdownColor: tc.surface2,
+                    isExpanded: true,
+                    style: TextStyle(color: tc.text100, fontSize: 14),
+                    iconEnabledColor: tc.text40,
+                    items: cats
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _category = v),
+                  ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(height: 14),
 
             // ── Date
@@ -239,17 +269,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: hasCategories ? _submit : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: tc.lime,
+                  backgroundColor: accentColor,
                   foregroundColor: tc.background,
+                  disabledBackgroundColor: tc.surface2,
+                  disabledForegroundColor: tc.text40,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Add Transaction',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                child: Text(
+                  hasCategories
+                      ? 'Add Transaction'
+                      : 'Add a Budget Category First',
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
