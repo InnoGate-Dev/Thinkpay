@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
@@ -121,6 +122,8 @@ class NotificationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = NotificationStore();
+    final tc = ThemeColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListenableBuilder(
       listenable: store,
@@ -129,44 +132,44 @@ class NotificationPage extends StatelessWidget {
         final read   = store.items.where((n) =>  n.isRead).toList();
 
         return Scaffold(
-          backgroundColor: AppColors.dark,
+          backgroundColor: tc.background,
           appBar: AppBar(
-            backgroundColor: AppColors.surface,
+            backgroundColor: tc.surface,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.w70, size: 18),
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc.text70, size: 18),
               onPressed: () => Navigator.pop(context),
             ),
             title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Notifications',
-                style: TextStyle(color: AppColors.w100, fontSize: 18, fontWeight: FontWeight.w700)),
+              Text('Notifications',
+                style: GoogleFonts.manrope(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
               if (store.unreadCount > 0)
                 Text('${store.unreadCount} unread',
-                  style: const TextStyle(color: AppColors.lime, fontSize: 11)),
+                  style: GoogleFonts.inter(color: tc.coreAction, fontSize: 11)),
             ]),
             actions: [
               if (store.unreadCount > 0)
                 TextButton(
                   onPressed: store.markAllRead,
-                  child: const Text('Mark all read',
-                    style: TextStyle(color: AppColors.lime, fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: Text('Mark all read',
+                    style: GoogleFonts.inter(color: tc.coreAction, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               const SizedBox(width: 4),
             ],
           ),
           body: store.items.isEmpty
-            ? const _EmptyState()
+            ? _EmptyState(tc: tc)
             : ListView(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 children: [
                   if (unread.isNotEmpty) ...[
-                    _SectionHeader(title: 'New', count: unread.length),
-                    ...unread.map((n) => _NotifTile(notif: n, store: store)),
+                    _SectionHeader(title: 'New', count: unread.length, tc: tc),
+                    ...unread.map((n) => _NotifTile(notif: n, store: store, tc: tc, isDark: isDark)),
                     const SizedBox(height: 8),
                   ],
                   if (read.isNotEmpty) ...[
-                    _SectionHeader(title: 'Earlier'),
-                    ...read.map((n) => _NotifTile(notif: n, store: store)),
+                    _SectionHeader(title: 'Earlier', tc: tc),
+                    ...read.map((n) => _NotifTile(notif: n, store: store, tc: tc, isDark: isDark)),
                   ],
                 ],
               ),
@@ -178,26 +181,27 @@ class NotificationPage extends StatelessWidget {
 
 // ── Section header ────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.count});
+  const _SectionHeader({required this.title, this.count, required this.tc});
   final String title;
   final int? count;
+  final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
     child: Row(children: [
       Text(title.toUpperCase(),
-        style: const TextStyle(color: AppColors.w40, fontSize: 11,
+        style: GoogleFonts.inter(color: tc.text40, fontSize: 11,
           fontWeight: FontWeight.w700, letterSpacing: 1.0)),
       if (count != null) ...[
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.lime, borderRadius: BorderRadius.circular(10),
+            color: tc.coreActionDim, borderRadius: BorderRadius.circular(10),
           ),
-          child: Text('$count', style: const TextStyle(
-            color: AppColors.dark, fontSize: 10, fontWeight: FontWeight.w800)),
+          child: Text('$count', style: GoogleFonts.inter(
+            color: tc.coreAction, fontSize: 10, fontWeight: FontWeight.w800)),
         ),
       ],
     ]),
@@ -206,14 +210,16 @@ class _SectionHeader extends StatelessWidget {
 
 // ── Notification tile ─────────────────────────────────────────────────────────
 class _NotifTile extends StatelessWidget {
-  const _NotifTile({required this.notif, required this.store});
+  const _NotifTile({required this.notif, required this.store, required this.tc, required this.isDark});
   final AppNotification notif;
   final NotificationStore store;
+  final ThemeColors tc;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     final icon  = _iconFor(notif.type);
-    final color = _colorFor(notif.type);
+    final color = _colorFor(notif.type, tc);
 
     return Dismissible(
       key: Key(notif.id),
@@ -223,10 +229,10 @@ class _NotifTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppColors.red.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
+          color: tc.accentExpenseDim,
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: const Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 20),
+        child: Icon(Icons.delete_outline_rounded, color: tc.accentExpense, size: 20),
       ),
       onDismissed: (_) => store.delete(notif.id),
       child: GestureDetector(
@@ -234,14 +240,24 @@ class _NotifTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: notif.isRead ? AppColors.surface : AppColors.surface.withValues(alpha: 0.98),
-            borderRadius: BorderRadius.circular(16),
+            color: tc.surface,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: notif.isRead ? AppColors.border : color.withValues(alpha: 0.35),
-              width: notif.isRead ? 1 : 1.5,
+              color: notif.isRead ? tc.border : color.withValues(alpha: 0.35),
+              width: notif.isRead ? 0.8 : 1.2,
             ),
+            boxShadow: isDark
+                ? null
+                : [
+                    if (!notif.isRead)
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      )
+                  ],
           ),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // ── Icon badge ───────────────────────────────────────────────
@@ -253,7 +269,7 @@ class _NotifTile extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
 
             // ── Content ──────────────────────────────────────────────────
             Expanded(
@@ -261,9 +277,9 @@ class _NotifTile extends StatelessWidget {
                 Row(children: [
                   Expanded(
                     child: Text(notif.title,
-                      style: TextStyle(
-                        color: AppColors.w100,
-                        fontSize: 13,
+                      style: GoogleFonts.inter(
+                        color: tc.text100,
+                        fontSize: 14,
                         fontWeight: notif.isRead ? FontWeight.w500 : FontWeight.w700,
                       )),
                   ),
@@ -273,12 +289,12 @@ class _NotifTile extends StatelessWidget {
                       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                     ),
                 ]),
-                const SizedBox(height: 4),
-                Text(notif.body,
-                  style: const TextStyle(color: AppColors.w40, fontSize: 12, height: 1.4)),
                 const SizedBox(height: 6),
+                Text(notif.body,
+                  style: GoogleFonts.inter(color: tc.text70, fontSize: 13, height: 1.4)),
+                const SizedBox(height: 8),
                 Text(_timeAgo(notif.time),
-                  style: const TextStyle(color: AppColors.w20, fontSize: 11)),
+                  style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
               ]),
             ),
           ]),
@@ -290,22 +306,24 @@ class _NotifTile extends StatelessWidget {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.tc});
+  final ThemeColors tc;
+
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Container(
         width: 80, height: 80,
-        decoration: BoxDecoration(color: AppColors.limeDim, shape: BoxShape.circle,
-          border: Border.all(color: AppColors.limeBorder)),
-        child: const Icon(Icons.notifications_none_rounded, color: AppColors.lime, size: 36),
+        decoration: BoxDecoration(color: tc.coreActionDim, shape: BoxShape.circle,
+          border: Border.all(color: tc.coreAction.withValues(alpha: 0.2))),
+        child: Icon(Icons.notifications_none_rounded, color: tc.coreAction, size: 36),
       ),
       const SizedBox(height: 20),
-      const Text("You're all caught up!",
-        style: TextStyle(color: AppColors.w100, fontSize: 16, fontWeight: FontWeight.w600)),
+      Text("You're all caught up!",
+        style: GoogleFonts.manrope(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 6),
-      const Text("No new notifications at the moment.",
-        style: TextStyle(color: AppColors.w40, fontSize: 13)),
+      Text("No new notifications at the moment.",
+        style: GoogleFonts.inter(color: tc.text40, fontSize: 14)),
     ]),
   );
 }
@@ -320,12 +338,12 @@ IconData _iconFor(NotifType t) {
   }
 }
 
-Color _colorFor(NotifType t) {
+Color _colorFor(NotifType t, ThemeColors tc) {
   switch (t) {
-    case NotifType.budgetAlert:    return AppColors.red;
-    case NotifType.newTransaction: return AppColors.lime;
-    case NotifType.tip:            return AppColors.blue;
-    case NotifType.system:         return const Color(0xFFFFC172);
+    case NotifType.budgetAlert:    return tc.accentExpense;
+    case NotifType.newTransaction: return tc.coreAction;
+    case NotifType.tip:            return tc.intelligenceAccent;
+    case NotifType.system:         return const Color(0xFFFFB74D); // Soft orange
   }
 }
 
