@@ -1,7 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
+import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 import 'package:Thinkpay/ui/component/navbar.dart' show drawerOpenNotifier;
 
@@ -15,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _provider = FinanceProvider();
+  final _profileStore = UserProfileStore();
 
   void _openAdd() => showModalBottomSheet(
         context: context,
@@ -28,104 +32,154 @@ class _HomeScreenState extends State<HomeScreen> {
     final tc = ThemeColors.of(context);
 
     return ListenableBuilder(
-      listenable: _provider,
+      listenable: Listenable.merge([_provider, _profileStore]),
       builder: (context, _) {
         final balance  = _provider.balance;
         final income   = _provider.totalIncome;
         final expenses = _provider.totalExpenses;
         final recent   = _provider.recentTransactions;
+        final name     = _profileStore.name.split(' ').first;
+        final hour     = DateTime.now().hour;
+        final greeting = hour < 12
+            ? 'Good morning'
+            : hour < 17
+                ? 'Good afternoon'
+                : 'Good evening';
 
         return Scaffold(
           backgroundColor: tc.background,
           onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
           appBar: AppBar(
-            leading: Builder(builder: (context){
-              return IconButton(onPressed: (){
-                Scaffold.of(context).openDrawer();
-              }, icon: Icon(Icons.person_2_outlined),);
+            leading: Builder(builder: (context) {
+              return IconButton(
+                onPressed: () => Scaffold.of(context).openDrawer(),
+                icon: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: tc.surface2,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: tc.border),
+                  ),
+                  child: Icon(Icons.person_rounded, color: tc.text70, size: 18),
+                ),
+              );
             }),
-
-            backgroundColor: tc.surface,
+            backgroundColor: tc.background,
             elevation: 0,
-            titleSpacing: 20,
-            title: RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600),
-                children: [
-                  TextSpan(
-                      text: 'Hello, ',
-                      style: TextStyle(color: tc.text40)),
-                  TextSpan(
-                      text: 'User 👋',
-                      style: TextStyle(color: tc.text100)),
-                ],
-              ),
+            titleSpacing: 0,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$greeting, $name',
+                  style: GoogleFonts.inter(
+                    color: tc.text40,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                Text(
+                  'ThinkPay',
+                  style: GoogleFonts.manrope(
+                    color: tc.text100,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.notifications_none_rounded,
-                    color: tc.text70),
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/notification'),
+                icon: Stack(
+                  children: [
+                    Icon(Icons.notifications_outlined, color: tc.text70, size: 22),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: tc.coreAction,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: tc.background, width: 1.2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                onPressed: () => Navigator.pushNamed(context, '/notification'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
             ],
           ),
           floatingActionButton: FloatingActionButton(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onPressed: _openAdd,
-            backgroundColor: tc.lime,
-            foregroundColor: tc.background,
-            child: const Icon(Icons.add_rounded, size: 28),
+            backgroundColor: tc.coreAction,
+            foregroundColor: Colors.white,
+            elevation: 2,
+            child: const Icon(Icons.add_rounded, size: 24),
           ),
-          drawer: Drawer(
-            // Add a ListView to the drawer. This ensures the user can scroll
-            // through the options in the drawer if there isn't enough vertical
-            // space to fit everything.
-              child: ProfileDrawer()
-          ),
+          drawer: Drawer(child: ProfileDrawer()),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             children: [
-              // ── Balance card ───────────────────────────────────────────
+              // ── Net Worth card ──────────────────────────────────────────
               _BalanceCard(
-                  balance: balance,
-                  income: income,
-                  expenses: expenses,
-                  tc: tc),
-              const SizedBox(height: 24),
+                balance: balance,
+                income: income,
+                expenses: expenses,
+                tc: tc,
+              ),
+              const SizedBox(height: 20),
 
-              // ── Savings progress ───────────────────────────────────────
-              _SavingsProgress(income: income, expenses: expenses, tc: tc),
-              const SizedBox(height: 24),
+              // ── ThinkPay Co-Pilot ───────────────────────────────────────
+              _CopilotCard(
+                tc: tc,
+                pct: income > 0
+                    ? ((income - expenses) / income).clamp(0.0, 1.0)
+                    : 0.0,
+              ),
+              const SizedBox(height: 28),
 
-              // ── Recent transactions ────────────────────────────────────
+              // ── Recent transactions ─────────────────────────────────────
               Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Recent Transactions',
-                        style: TextStyle(
-                            color: tc.text100,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700)),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Text('See all',
-                          style: TextStyle(
-                              color: tc.lime,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Activity',
+                    style: GoogleFonts.manrope(
+                      color: tc.text100,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
-                  ]),
+                  ),
+                  GestureDetector(
+                    onTap: () {},
+                    child: Text(
+                      'See all',
+                      style: GoogleFonts.inter(
+                        color: tc.coreAction,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               if (recent.isEmpty)
                 _EmptyState(
-                    message:
-                        'No transactions yet.\nTap + to add one.',
-                    tc: tc),
-              ...recent.map((t) =>
-                  _TransactionTile(transaction: t, tc: tc)),
+                  message: 'No transactions yet.\nTap + to record one.',
+                  tc: tc,
+                ),
+              if (recent.isNotEmpty)
+                _TransactionList(transactions: recent, tc: tc),
             ],
           ),
         );
@@ -147,158 +201,387 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [tc.cardGradientStart, tc.cardGradientEnd],
+          colors: isDark
+              ? [const Color(0xFF151922), const Color(0xFF0F1116)]
+              : [Colors.white, const Color(0xFFF8FAFB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: tc.limeBorder),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tc.border, width: 0.8),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                )
+              ],
       ),
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Total Balance',
-            style: TextStyle(
-                color: tc.text40, fontSize: 13, letterSpacing: 0.5)),
-        const SizedBox(height: 8),
-        Text(
-          'Rs. ${_fmt(balance)}',
-          style: TextStyle(
-            color: balance >= 0 ? tc.lime : tc.red,
-            fontSize: 36,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Text(
+            'TOTAL BALANCE',
+            style: GoogleFonts.inter(
+              color: tc.text40,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        Divider(color: tc.text10, thickness: 1),
-        const SizedBox(height: 16),
-        Row(children: [
-          _StatPill(
-              label: 'Income',
-              value: income,
-              color: tc.lime,
-              icon: Icons.arrow_downward_rounded),
-          const SizedBox(width: 12),
-          _StatPill(
-              label: 'Expenses',
-              value: expenses,
-              color: tc.red,
-              icon: Icons.arrow_upward_rounded),
-        ]),
-      ]),
-    );
-  }
-}
+          const SizedBox(height: 10),
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-  final String label;
-  final double value;
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final tc = ThemeColors.of(context);
-    return Expanded(
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 15),
+          // Balance amount
+          Text(
+            'Rs. ${_fmt(balance)}',
+            style: GoogleFonts.manrope(
+              color: tc.text100,
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.0,
+              height: 1.0,
+            ),
           ),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label,
-                style:
-                    TextStyle(color: tc.text40, fontSize: 11)),
-            Text('Rs. ${_fmt(value)}',
-                style: TextStyle(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-          ]),
-        ]),
+          const SizedBox(height: 6),
+
+          // Balance change indicator
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: balance >= 0 ? tc.coreActionDim : tc.accentExpenseDim,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      balance >= 0
+                          ? Icons.trending_up_rounded
+                          : Icons.trending_down_rounded,
+                      size: 12,
+                      color: balance >= 0 ? tc.coreAction : tc.accentExpense,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      balance >= 0 ? 'Positive balance' : 'Negative balance',
+                      style: GoogleFonts.inter(
+                        color: balance >= 0 ? tc.coreAction : tc.accentExpense,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          Divider(color: tc.border, height: 1, thickness: 0.5),
+          const SizedBox(height: 16),
+
+          // Income & Expenses row
+          Row(
+            children: [
+              Expanded(
+                child: _BalanceStat(
+                  label: 'Income',
+                  amount: income,
+                  color: tc.coreAction,
+                  icon: Icons.arrow_downward_rounded,
+                  tc: tc,
+                ),
+              ),
+              Container(width: 0.5, height: 36, color: tc.border),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: _BalanceStat(
+                    label: 'Expenses',
+                    amount: expenses,
+                    color: tc.accentExpense,
+                    icon: Icons.arrow_upward_rounded,
+                    tc: tc,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Savings progress ──────────────────────────────────────────────────────────
-class _SavingsProgress extends StatelessWidget {
-  const _SavingsProgress({
-    required this.income,
-    required this.expenses,
+class _BalanceStat extends StatelessWidget {
+  const _BalanceStat({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
     required this.tc,
   });
-  final double income, expenses;
+  final String label;
+  final double amount;
+  final Color color;
+  final IconData icon;
   final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) {
-    final pct =
-        income > 0 ? ((income - expenses) / income).clamp(0.0, 1.0) : 0.0;
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: tc.text40,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Rs. ${_fmt(amount)}',
+              style: GoogleFonts.manrope(
+                color: tc.text100,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── ThinkPay Co-Pilot ─────────────────────────────────────────────────────────
+class _CopilotCard extends StatelessWidget {
+  const _CopilotCard({required this.tc, required this.pct});
+  final ThemeColors tc;
+  final double pct;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: tc.intelligenceAccent.withValues(alpha: isDark ? 0.07 : 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: tc.intelligenceAccent.withValues(alpha: 0.18),
+              width: 0.8,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Pulsing AI icon
+              _PulsingAIIcon(tc: tc),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'AI Co-Pilot',
+                          style: GoogleFonts.manrope(
+                            color: tc.text100,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: tc.intelligenceAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'LIVE',
+                            style: GoogleFonts.inter(
+                              color: tc.intelligenceAccent,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      pct >= 0.2
+                          ? 'You\'re on track — saving ${(pct * 100).toStringAsFixed(1)}% of income this month. Keep it up!'
+                          : 'Consider cutting back. You\'re saving only ${(pct * 100).toStringAsFixed(1)}% of your income right now.',
+                      style: GoogleFonts.inter(
+                        color: tc.text70,
+                        fontSize: 12,
+                        height: 1.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Savings rate bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 4,
+                        backgroundColor: tc.intelligenceAccentDim,
+                        valueColor: AlwaysStoppedAnimation(
+                          pct >= 0.2 ? tc.coreAction : tc.accentExpense,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingAIIcon extends StatefulWidget {
+  const _PulsingAIIcon({required this.tc});
+  final ThemeColors tc;
+
+  @override
+  State<_PulsingAIIcon> createState() => _PulsingAIIconState();
+}
+
+class _PulsingAIIconState extends State<_PulsingAIIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _scaleAnim = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = widget.tc;
+    return AnimatedBuilder(
+      animation: _scaleAnim,
+      builder: (_, __) => Transform.scale(
+        scale: _scaleAnim.value,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: tc.intelligenceAccent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    tc.intelligenceAccent.withValues(alpha: _scaleAnim.value * 0.2),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.auto_awesome_rounded,
+            color: tc.intelligenceAccent,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Transaction list (flush grouped style) ────────────────────────────────────
+class _TransactionList extends StatelessWidget {
+  const _TransactionList({required this.transactions, required this.tc});
+  final List<TransactionModel> transactions;
+  final ThemeColors tc;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: tc.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: tc.border),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tc.border, width: 0.8),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                )
+              ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text('Savings Rate',
-              style: TextStyle(
-                  color: tc.text100,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text(
-            '${(pct * 100).toStringAsFixed(1)}%',
-            style: TextStyle(
-                color: tc.lime,
-                fontSize: 14,
-                fontWeight: FontWeight.w700),
-          ),
-        ]),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: pct,
-            minHeight: 8,
-            backgroundColor: tc.text10,
-            valueColor: AlwaysStoppedAnimation(tc.lime),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          pct >= 0.2
-              ? '🎉 Great job! You\'re saving more than 20% of your income.'
-              : '💡 Aim to save at least 20% of your income each month.',
-          style:
-              TextStyle(color: tc.text40, fontSize: 12, height: 1.4),
-        ),
-      ]),
+      child: Column(
+        children: [
+          for (int i = 0; i < transactions.length; i++) ...[
+            _TransactionTile(transaction: transactions[i], tc: tc),
+            if (i < transactions.length - 1)
+              Divider(
+                color: tc.divider,
+                height: 1,
+                thickness: 0.5,
+                indent: 68,
+              ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -312,52 +595,81 @@ class _TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.type == TransactionType.income;
-    final color    = isIncome ? tc.lime : tc.red;
+    final accentColor = isIncome ? tc.coreAction : tc.accentExpense;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: tc.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tc.border),
-      ),
-      child: Row(children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12)),
-          child:
-              Icon(_categoryIcon(transaction.category), color: color, size: 20),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          // Category icon
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              _categoryIcon(transaction.category),
+              color: accentColor,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Title & category
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(transaction.title,
-                    style: TextStyle(
-                        color: tc.text100,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(transaction.category,
-                    style: TextStyle(color: tc.text40, fontSize: 12)),
-              ]),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(
-            '${isIncome ? '+' : '-'} Rs. ${_fmt(transaction.amount)}',
-            style: TextStyle(
-                color: color, fontSize: 14, fontWeight: FontWeight.w700),
+                Text(
+                  transaction.title,
+                  style: GoogleFonts.inter(
+                    color: tc.text100,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  transaction.category,
+                  style: GoogleFonts.inter(
+                    color: tc.text40,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(_dateStr(transaction.date),
-              style: TextStyle(color: tc.text40, fontSize: 11)),
-        ]),
-      ]),
+
+          // Amount & date
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isIncome ? '+' : '−'} Rs. ${_fmt(transaction.amount)}',
+                style: GoogleFonts.manrope(
+                  color: isIncome ? tc.coreAction : tc.text100,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _dateStr(transaction.date),
+                style: GoogleFonts.inter(
+                  color: tc.text40,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -366,18 +678,31 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.message, required this.tc});
   final String message;
   final ThemeColors tc;
+
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(36),
         decoration: BoxDecoration(
-            color: tc.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: tc.border)),
+          color: tc.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: tc.border, width: 0.8),
+        ),
         child: Center(
-          child: Text(message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: tc.text40, fontSize: 14, height: 1.6)),
+          child: Column(
+            children: [
+              Icon(Icons.receipt_long_outlined, color: tc.text20, size: 40),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: tc.text40,
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
         ),
       );
 }
@@ -394,10 +719,16 @@ String _dateStr(DateTime d) {
   if (d.year == now.year && d.month == now.month && d.day == now.day) {
     return 'Today';
   }
-  if (d.year == now.year && d.month == now.month && d.day == now.day - 1) {
+  if (d.year == now.year &&
+      d.month == now.month &&
+      d.day == now.day - 1) {
     return 'Yesterday';
   }
-  return '${d.day}/${d.month}/${d.year}';
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return '${d.day} ${months[d.month - 1]}';
 }
 
 IconData _categoryIcon(String cat) {

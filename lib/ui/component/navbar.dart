@@ -1,6 +1,7 @@
 import 'package:Thinkpay/ui/pages/goal/Goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
@@ -27,7 +28,6 @@ class _AppShellState extends State<AppShell>
   late int _currentIndex;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
-
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -105,35 +105,37 @@ class _AppShellState extends State<AppShell>
         return FloatingActionButton(
           heroTag: 'fab_budget',
           onPressed: _openAddBudget,
-          backgroundColor: tc.lime,
+          backgroundColor: tc.coreAction,
           foregroundColor: tc.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: const Icon(Icons.add_rounded, size: 28),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: const Icon(Icons.add_rounded, size: 24),
         );
       case 3: // Transactions
         return FloatingActionButton.extended(
           heroTag: 'fab_transaction',
           onPressed: _openAddTransaction,
-          backgroundColor: tc.lime,
+          backgroundColor: tc.coreAction,
           foregroundColor: tc.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.add_rounded, size: 20),
+          label: Text(
             'Add Transaction',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
           ),
         );
       case 4: // Goals
         return FloatingActionButton.extended(
           heroTag: 'fab_goal',
           onPressed: _openAddGoal,
-          backgroundColor: tc.lime,
+          backgroundColor: tc.coreAction,
           foregroundColor: tc.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.add_rounded, size: 20),
+          label: Text(
             'New Goal',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
           ),
         );
       default:
@@ -200,24 +202,70 @@ class _ThinkPayNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
         color: tc.surface,
-        border: Border(top: BorderSide(color: tc.border, width: 1.0)),
+        border: Border(top: BorderSide(color: tc.border, width: 0.5)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4),
+                ),
+              ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _RegularTab(icon: Icons.home_outlined,         activeIcon: Icons.home_rounded,         label: 'Home',         index: 0, current: currentIndex, onTap: onTap, tc: tc),
-              _RegularTab(icon: Icons.pie_chart_outline,     activeIcon: Icons.pie_chart,            label: 'Budget',       index: 1, current: currentIndex, onTap: onTap, tc: tc),
-              _AiChatFab(isActive: currentIndex == 2, onTap: () => onTap(2), tc: tc),
-              _RegularTab(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long,         label: 'Transactions', index: 3, current: currentIndex, onTap: onTap, tc: tc),
-              _RegularTab(icon: Icons.currency_bitcoin, activeIcon: Icons.currency_bitcoin,      label: 'Goal',      index: 4, current: currentIndex, onTap: onTap, tc: tc),
+              _NavTab(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'Home',
+                index: 0,
+                current: currentIndex,
+                onTap: onTap,
+                tc: tc,
+              ),
+              _NavTab(
+                icon: Icons.pie_chart_outline_rounded,
+                activeIcon: Icons.pie_chart_rounded,
+                label: 'Budget',
+                index: 1,
+                current: currentIndex,
+                onTap: onTap,
+                tc: tc,
+              ),
+              _AiCenterTab(
+                isActive: currentIndex == 2,
+                onTap: () => onTap(2),
+                tc: tc,
+              ),
+              _NavTab(
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long_rounded,
+                label: 'Spends',
+                index: 3,
+                current: currentIndex,
+                onTap: onTap,
+                tc: tc,
+              ),
+              _NavTab(
+                icon: Icons.flag_outlined,
+                activeIcon: Icons.flag_rounded,
+                label: 'Goals',
+                index: 4,
+                current: currentIndex,
+                onTap: onTap,
+                tc: tc,
+              ),
             ],
           ),
         ),
@@ -226,9 +274,9 @@ class _ThinkPayNavBar extends StatelessWidget {
   }
 }
 
-// ── Floating AI Chat button ───────────────────────────────────────────────────
-class _AiChatFab extends StatelessWidget {
-  const _AiChatFab({
+// ── Center AI Chat tab — refined inline pill ──────────────────────────────────
+class _AiCenterTab extends StatelessWidget {
+  const _AiCenterTab({
     required this.isActive,
     required this.onTap,
     required this.tc,
@@ -246,32 +294,41 @@ class _AiChatFab extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Transform.translate(
-            offset: const Offset(0, -20),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: tc.lime,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: tc.background, width: 3),
-                boxShadow: isActive
-                    ? [BoxShadow(color: tc.lime.withValues(alpha: 0.35), blurRadius: 16, spreadRadius: 1)]
-                    : [],
-              ),
-              child: Icon(Icons.auto_awesome_rounded, color: tc.background, size: 26),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width: 52,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? tc.intelligenceAccent
+                  : tc.intelligenceAccentDim,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: tc.intelligenceAccent.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: isActive ? Colors.white : tc.intelligenceAccent,
+              size: 20,
             ),
           ),
-          Transform.translate(
-            offset: const Offset(0, -16),
-            child: Text(
-              'AI Chat',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: isActive ? tc.lime : tc.lime.withValues(alpha: 0.7),
-                letterSpacing: 0.2,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            'AI',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              color: isActive ? tc.intelligenceAccent : tc.text40,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -281,8 +338,8 @@ class _AiChatFab extends StatelessWidget {
 }
 
 // ── Regular nav tab ───────────────────────────────────────────────────────────
-class _RegularTab extends StatelessWidget {
-  const _RegularTab({
+class _NavTab extends StatelessWidget {
+  const _NavTab({
     required this.icon,
     required this.activeIcon,
     required this.label,
@@ -307,14 +364,8 @@ class _RegularTab extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: _isSelected ? tc.lime.withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -323,20 +374,31 @@ class _RegularTab extends StatelessWidget {
               child: Icon(
                 _isSelected ? activeIcon : icon,
                 key: ValueKey(_isSelected),
-                color: _isSelected ? tc.lime : tc.text40,
-                size: 24,
+                color: _isSelected ? tc.coreAction : tc.text40,
+                size: 22,
               ),
             ),
             const SizedBox(height: 4),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 180),
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: _isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: _isSelected ? tc.lime : tc.text40,
-                letterSpacing: 0.2,
+                color: _isSelected ? tc.coreAction : tc.text40,
               ),
               child: Text(label),
+            ),
+            const SizedBox(height: 2),
+            // Active indicator dot
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: _isSelected ? 4 : 0,
+              height: _isSelected ? 4 : 0,
+              decoration: BoxDecoration(
+                color: tc.coreAction,
+                shape: BoxShape.circle,
+              ),
             ),
           ],
         ),
