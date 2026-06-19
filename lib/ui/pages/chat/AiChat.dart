@@ -5,6 +5,9 @@ import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/chat_message_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
+import '../../component/navbar.dart';
+import 'chathistory.dart';
+
 // ── Mock AI responses ─────────────────────────────────────────────────────────
 const _aiResponses = {
   'budget':  'Budgeting is the foundation of financial health! Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings. Your current spending patterns can guide you to create realistic budget targets. 💡',
@@ -105,9 +108,15 @@ class _AichatState extends State<Aichat> {
 
         return Scaffold(
           backgroundColor: tc.background,
+          onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
           // Let Scaffold push content up when keyboard appears
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
+            leading: Builder(builder: (context){
+              return IconButton(onPressed: (){
+                Scaffold.of(context).openDrawer();
+              }, icon: Icon(Icons.menu),);
+            }),
             backgroundColor: tc.surface,
             elevation: 0,
             titleSpacing: 16,
@@ -140,6 +149,12 @@ class _AichatState extends State<Aichat> {
                     ),
                   ]),
             ]),
+          ),
+          drawer: Drawer(
+            // Add a ListView to the drawer. This ensures the user can scroll
+            // through the options in the drawer if there isn't enough vertical
+            // space to fit everything.
+              child: ChathistoryDrawer()
           ),
           body: Column(
             children: [
