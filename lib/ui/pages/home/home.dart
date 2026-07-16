@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Text(
-                  'ThinkPay',
+                  'DayOne',
                   style: GoogleFonts.manrope(
                     color: tc.text100,
                     fontSize: 18,
@@ -81,10 +81,37 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             actions: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: Stack(
+                      children: [
+                        Icon(Icons.notifications_outlined, color: tc.text70, size: 22),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: tc.coreAction,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: tc.background, width: 1.2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    onPressed: () => Navigator.pushNamed(context, '/notification'),
+                  ),
+                ],
+              ),
+
               IconButton(
+                onPressed: () => Navigator.pushNamed(context, '/news'),
                 icon: Stack(
                   children: [
-                    Icon(Icons.notifications_outlined, color: tc.text70, size: 22),
+                    Icon(Icons.newspaper_outlined, color: tc.text70, size: 22),
                     Positioned(
                       top: 0,
                       right: 0,
@@ -100,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                onPressed: () => Navigator.pushNamed(context, '/notification'),
               ),
               const SizedBox(width: 4),
             ],

@@ -5,6 +5,9 @@ import 'package:Thinkpay/ui/pages/Splash_screen.dart';
 import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
 import 'package:Thinkpay/ui/pages/auth/signup.dart';
+import 'package:Thinkpay/model/news_model.dart';
+import 'package:Thinkpay/ui/pages/news/news-details.dart';
+import 'package:Thinkpay/ui/pages/news/news.dart';
 import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
@@ -56,4 +59,8 @@ final routes = <String, WidgetBuilder>{
   '/security':    (context) => const SecurityPage(),
   '/support':     (context) => const SupportPage(),
   '/transaction': (context) => const AppShell(initialIndex: 3),
+  '/news': (context) => const NewsPage(),
+  '/news-details': (context) => NewsDetailsPage(
+        news: ModalRoute.of(context)!.settings.arguments as NewsModel,
+      ),
 };
