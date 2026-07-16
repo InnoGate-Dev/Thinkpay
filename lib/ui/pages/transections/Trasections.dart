@@ -5,8 +5,12 @@ import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 
+/// Optional notifier to set the filter from outside.
+final transactionFilterNotifier = ValueNotifier<TransactionType?>(null);
+
 class Transection extends StatefulWidget {
-  const Transection({super.key});
+  const Transection({super.key, this.type});
+  final TransactionType? type;
   @override
   State<Transection> createState() => _TransectionState();
 }
@@ -20,12 +24,23 @@ class _TransectionState extends State<Transection> {
   @override
   void initState() {
     super.initState();
+    _filter = widget.type ?? transactionFilterNotifier.value;
+    
+    transactionFilterNotifier.addListener(_onFilterChanged);
+
     _searchCtrl.addListener(
         () => setState(() => _query = _searchCtrl.text.toLowerCase()));
   }
 
+  void _onFilterChanged() {
+    if (mounted) {
+      setState(() => _filter = transactionFilterNotifier.value);
+    }
+  }
+
   @override
   void dispose() {
+    transactionFilterNotifier.removeListener(_onFilterChanged);
     _searchCtrl.dispose();
     super.dispose();
   }

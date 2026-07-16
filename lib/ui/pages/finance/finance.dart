@@ -6,18 +6,20 @@ import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
+import 'package:Thinkpay/ui/component/navbar.dart';
+import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 
-/// Published whenever the Budget page's Expense/Income tab changes.
+/// Published whenever the Finance page's Expense/Income tab changes.
 /// AppShell reads this so its FAB can pre-select the correct type.
-final budgetTabIndexNotifier = ValueNotifier<int>(0);
+final financeTabIndexNotifier = ValueNotifier<int>(0);
 
-class BudgetPage extends StatefulWidget {
-  const BudgetPage({super.key});
+class FinancePage extends StatefulWidget {
+  const FinancePage({super.key});
   @override
-  State<BudgetPage> createState() => _BudgetPageState();
+  State<FinancePage> createState() => _FinancePageState();
 }
 
-class _BudgetPageState extends State<BudgetPage>
+class _FinancePageState extends State<FinancePage>
     with SingleTickerProviderStateMixin {
   final _provider = FinanceProvider();
   late TabController _tab;
@@ -28,7 +30,7 @@ class _BudgetPageState extends State<BudgetPage>
     _tab = TabController(length: 2, vsync: this);
     _tab.addListener(() {
       setState(() {});
-      budgetTabIndexNotifier.value = _tab.index;
+      financeTabIndexNotifier.value = _tab.index;
     });
   }
 
@@ -90,7 +92,7 @@ class _BudgetPageState extends State<BudgetPage>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                   child: Text(
-                    'Budget',
+                    'Finance',
                     style: GoogleFonts.manrope(
                       color: tc.text100,
                       fontSize: 24,
@@ -117,7 +119,7 @@ class _BudgetPageState extends State<BudgetPage>
                   child: TabBarView(
                     controller: _tab,
                     children: [
-                      _BudgetTab(
+                      _FinanceTab(
                         budgets: expBudgets,
                         actualMap: expActual,
                         pieSections: expPieSections,
@@ -127,7 +129,7 @@ class _BudgetPageState extends State<BudgetPage>
                         type: TransactionType.expense,
                         tc: tc,
                       ),
-                      _BudgetTab(
+                      _FinanceTab(
                         budgets: incBudgets,
                         actualMap: incActual,
                         pieSections: incPieSections,
@@ -201,9 +203,9 @@ class _SegmentedControl extends StatelessWidget {
   }
 }
 
-// ── Budget Tab ────────────────────────────────────────────────────────────────
-class _BudgetTab extends StatelessWidget {
-  const _BudgetTab({
+// ── Finance Tab ────────────────────────────────────────────────────────────────
+class _FinanceTab extends StatelessWidget {
+  const _FinanceTab({
     required this.budgets,
     required this.actualMap,
     required this.pieSections,
@@ -235,6 +237,7 @@ class _BudgetTab extends StatelessWidget {
             budgets: budgets,
             actualMap: actualMap,
             accent: accentColor,
+            type: type,
             tc: tc),
         const SizedBox(height: 16),
 
@@ -383,7 +386,7 @@ class _BudgetTab extends StatelessWidget {
             ),
           ),
 
-        ...budgets.map((b) => _BudgetCard(
+        ...budgets.map((b) => _FinanceCard(
               b: b,
               actual: actualMap[b.name] ?? 0.0,
               accentColor: accentColor,
@@ -394,9 +397,9 @@ class _BudgetTab extends StatelessWidget {
   }
 }
 
-// ── Budget Category Card ──────────────────────────────────────────────────────
-class _BudgetCard extends StatelessWidget {
-  const _BudgetCard({
+// ── Finance Category Card ──────────────────────────────────────────────────────
+class _FinanceCard extends StatelessWidget {
+  const _FinanceCard({
     required this.b,
     required this.actual,
     required this.accentColor,
@@ -607,11 +610,13 @@ class _SummaryRow extends StatelessWidget {
     required this.budgets,
     required this.actualMap,
     required this.accent,
+    required this.type,
     required this.tc,
   });
   final List<BudgetCategory> budgets;
   final Map<String, double> actualMap;
   final Color accent;
+  final TransactionType type;
   final ThemeColors tc;
 
   @override
@@ -662,20 +667,33 @@ class _SummaryRow extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 16),
         ),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Actual',
-                style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
-            const SizedBox(height: 4),
-            Text(
-              'Rs. ${_fmt(totalActual)}',
-              style: GoogleFonts.manrope(
-                color: accent,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
+          child: InkWell(
+            onTap: () {
+              transactionFilterNotifier.value = type;
+              appShellIndexNotifier.value = 3; // Index of Transactions tab
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Actual',
+                      style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
+                  Icon(Icons.chevron_right_rounded, color: tc.text40, size: 16),
+                ],
               ),
-            ),
-          ]),
+              const SizedBox(height: 4),
+              Text(
+                'Rs. ${_fmt(totalActual)}',
+                style: GoogleFonts.manrope(
+                  color: accent,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ]),
+          ),
         ),
       ]),
     );

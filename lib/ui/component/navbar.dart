@@ -7,14 +7,18 @@ import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
 import 'package:Thinkpay/ui/component/add_goal_sheet.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
-import 'package:Thinkpay/ui/pages/Budget/budget.dart';
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
 import 'package:Thinkpay/ui/pages/home/home.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 import 'package:Thinkpay/ui/pages/home/drawersection.dart';
 
+import '../pages/finance/finance.dart';
+
 /// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
 final drawerOpenNotifier = ValueNotifier<bool>(false);
+
+/// Current active tab index of the AppShell.
+final appShellIndexNotifier = ValueNotifier<int>(0);
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.initialIndex = 0});
@@ -32,7 +36,7 @@ class _AppShellState extends State<AppShell>
 
   final List<Widget> _pages = const [
     HomeScreen(),
-    BudgetPage(),
+    FinancePage(),
     Aichat(),
     Transection(),
     SetGoalPage(),
@@ -42,6 +46,8 @@ class _AppShellState extends State<AppShell>
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    appShellIndexNotifier.value = _currentIndex;
+    appShellIndexNotifier.addListener(_onIndexChangedExternally);
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarIconBrightness: Brightness.light,
@@ -58,19 +64,27 @@ class _AppShellState extends State<AppShell>
 
   @override
   void dispose() {
+    appShellIndexNotifier.removeListener(_onIndexChangedExternally);
     _fadeCtrl.dispose();
     super.dispose();
+  }
+
+  void _onIndexChangedExternally() {
+    if (appShellIndexNotifier.value != _currentIndex) {
+      _onTabTapped(appShellIndexNotifier.value);
+    }
   }
 
   Future<void> _onTabTapped(int index) async {
     if (index == _currentIndex) return;
     await _fadeCtrl.reverse();
     setState(() => _currentIndex = index);
+    appShellIndexNotifier.value = index;
     _fadeCtrl.forward();
   }
 
   void _openAddBudget() {
-    final type = budgetTabIndexNotifier.value == 0
+    final type = financeTabIndexNotifier.value == 0
         ? TransactionType.expense
         : TransactionType.income;
     showModalBottomSheet(
@@ -261,9 +275,9 @@ class _ThinkPayNavBar extends StatelessWidget {
                 tc: tc,
               ),
               _NavTab(
-                icon: Icons.groups_2_outlined,
-                activeIcon: Icons.groups_2_rounded,
-                label: 'Community',
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long_rounded,
+                label: 'Transactions',
                 index: 3,
                 current: currentIndex,
                 onTap: onTap,

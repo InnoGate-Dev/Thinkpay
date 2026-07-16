@@ -7,6 +7,9 @@ import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 
+import 'package:Thinkpay/ui/component/navbar.dart';
+import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
+
 import '../../component/carousel.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -167,7 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, "/transaction");
+                      transactionFilterNotifier.value = null;
+                      appShellIndexNotifier.value = 3;
                     },
                     child: Text(
                       'See all',
