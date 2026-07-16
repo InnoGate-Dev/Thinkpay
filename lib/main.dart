@@ -1,12 +1,10 @@
 import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/constant/theme_provider.dart';
 import 'package:Thinkpay/ui/component/navbar.dart';
-import 'package:Thinkpay/ui/pages/Budget/budget.dart';
 import 'package:Thinkpay/ui/pages/Splash_screen.dart';
 import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
 import 'package:Thinkpay/ui/pages/auth/signup.dart';
-import 'package:Thinkpay/ui/pages/goal/Goal.dart';
 import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
@@ -49,12 +47,13 @@ final routes = <String, WidgetBuilder>{
   '/signup':      (context) => const SignUp(),
   '/login':       (context) => const Login(),
   '/forgetpass':  (context) => const ForgotPassword(),
-  '/home':        (context) => const AppShell(),
+  '/home':        (context) => const AppShell(initialIndex: 0),
   '/notification':(context) => NotificationPage(),
-  '/budget':      (context) => BudgetPage(),
-  '/goal':        (context) => const SetGoalPage(),
+  '/budget':      (context) => const AppShell(initialIndex: 1),
+  '/goal':        (context) => const AppShell(initialIndex: 4),
   '/profile':     (context) => const Profile(),
   '/editprofile': (context) => const EditProfilePage(),
   '/security':    (context) => const SecurityPage(),
   '/support':     (context) => const SupportPage(),
+  '/transaction': (context) => const AppShell(initialIndex: 3),
 };

@@ -6,9 +6,8 @@ import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
-import 'package:Thinkpay/ui/component/navbar.dart' show drawerOpenNotifier;
 
-import 'drawersection.dart';
+import '../../component/carousel.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,13 +18,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _provider = FinanceProvider();
   final _profileStore = UserProfileStore();
-
-  void _openAdd() => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => const AddTransactionSheet(),
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -48,23 +40,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: tc.background,
-          onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
+          drawerEnableOpenDragGesture: false,
           appBar: AppBar(
-            leading: Builder(builder: (context) {
-              return IconButton(
-                onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: tc.surface2,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: tc.border),
-                  ),
-                  child: Icon(Icons.person_rounded, color: tc.text70, size: 18),
+            leading: IconButton(
+              onPressed: () => Scaffold.of(context).openDrawer(),
+              icon: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: tc.surface2,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: tc.border),
                 ),
-              );
-            }),
+                child: Icon(Icons.person_rounded, color: tc.text70, size: 18),
+              ),
+            ),
             backgroundColor: tc.background,
             elevation: 0,
             titleSpacing: 0,
@@ -115,15 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 4),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            onPressed: _openAdd,
-            backgroundColor: tc.coreAction,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            child: const Icon(Icons.add_rounded, size: 24),
-          ),
-          drawer: Drawer(child: ProfileDrawer()),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             children: [
@@ -159,7 +140,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pushNamed(context, "/transaction");
+                    },
                     child: Text(
                       'See all',
                       style: GoogleFonts.inter(

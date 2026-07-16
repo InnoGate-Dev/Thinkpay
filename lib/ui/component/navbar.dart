@@ -11,6 +11,7 @@ import 'package:Thinkpay/ui/pages/Budget/budget.dart';
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
 import 'package:Thinkpay/ui/pages/home/home.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
+import 'package:Thinkpay/ui/pages/home/drawersection.dart';
 
 /// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
 final drawerOpenNotifier = ValueNotifier<bool>(false);
@@ -101,6 +102,15 @@ class _AppShellState extends State<AppShell>
   /// Returns the FAB widget for the current page, or null for pages without one.
   Widget? _fabFor(ThemeColors tc) {
     switch (_currentIndex) {
+      case 0: // Home
+        return FloatingActionButton(
+          heroTag: 'fab_home',
+          onPressed: _openAddTransaction,
+          backgroundColor: tc.coreAction,
+          foregroundColor: tc.background,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: const Icon(Icons.add_rounded, size: 24),
+        );
       case 1: // Budget
         return FloatingActionButton(
           heroTag: 'fab_budget',
@@ -149,6 +159,8 @@ class _AppShellState extends State<AppShell>
     return Scaffold(
       backgroundColor: tc.background,
       extendBody: true,
+      onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
+      drawer: const Drawer(child: ProfileDrawer()),
       floatingActionButton: AnimatedSwitcher(
         duration: const Duration(milliseconds: 220),
         switchInCurve: Curves.easeOutBack,

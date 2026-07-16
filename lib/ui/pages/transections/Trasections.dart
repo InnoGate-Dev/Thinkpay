@@ -55,6 +55,7 @@ class _TransectionState extends State<Transection> {
 
         return Scaffold(
           backgroundColor: tc.background,
+          drawerEnableOpenDragGesture: false,
           body: SafeArea(
             bottom: false,
             child: Column(

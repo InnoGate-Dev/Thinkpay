@@ -80,6 +80,7 @@ class _BudgetPageState extends State<BudgetPage>
 
         return Scaffold(
           backgroundColor: tc.background,
+          drawerEnableOpenDragGesture: false,
           body: SafeArea(
             bottom: false,
             child: Column(

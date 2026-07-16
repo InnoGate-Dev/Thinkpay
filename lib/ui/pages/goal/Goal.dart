@@ -48,6 +48,7 @@ class _SetGoalPageState extends State<SetGoalPage>
 
         return Scaffold(
           backgroundColor: tc.background,
+          drawerEnableOpenDragGesture: false,
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
