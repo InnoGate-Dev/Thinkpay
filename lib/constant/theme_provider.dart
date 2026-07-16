@@ -9,7 +9,7 @@ class ThemeNotifier extends ChangeNotifier {
   ThemeNotifier._internal();
 
   // ── State ──────────────────────────────────────────────────────────────────
-  ThemeMode _mode = ThemeMode.dark;
+  ThemeMode _mode = ThemeMode.light;
 
   ThemeMode get mode => _mode;
   bool get isDark => _mode == ThemeMode.dark;

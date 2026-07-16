@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:Thinkpay/constant/app_colors.dart';
 
 class SignUp extends StatefulWidget {
   const SignUp({super.key});
@@ -29,10 +31,6 @@ class _SignUpState extends State<SignUp> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Brand colours
-  static const Color _bg = Color(0xFF0E0E0E);
-  static const Color _lime = Color(0xFFBFFF3C);
-
   @override
   void initState() {
     super.initState();
@@ -60,8 +58,11 @@ class _SignUpState extends State<SignUp> {
 
   @override
   Widget build(BuildContext context) {
+    final tc = ThemeColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: tc.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -69,60 +70,50 @@ class _SignUpState extends State<SignUp> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 28),
-
-              // ── Logo ──────────────────────────────────────────────
-              _LogoRow(),
-
+              _LogoRow(tc: tc),
               const SizedBox(height: 32),
-
-              // ── Tag ───────────────────────────────────────────────
-              _TagPill(label: 'Create account'),
-
+              _TagPill(label: 'Create account', tc: tc),
               const SizedBox(height: 14),
-
-              // ── Headline ──────────────────────────────────────────
               RichText(
-                text: const TextSpan(
-                  style: TextStyle(
+                text: TextSpan(
+                  style: GoogleFonts.manrope(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     height: 1.1,
-                    color: Colors.white,
+                    color: tc.text100,
+                    letterSpacing: -1.0,
                   ),
                   children: [
-                    TextSpan(text: 'Start\n'),
+                    const TextSpan(text: 'Start\n'),
                     TextSpan(
                       text: 'thinking smart.',
-                      style: TextStyle(
-                        color: _lime,
+                      style: GoogleFonts.manrope(
+                        color: tc.coreAction,
                         fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              const Text(
+              Text(
                 'One account to track every rupee you spend.',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Color(0x62FFFFFF),
+                  color: tc.text40,
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 36),
 
-              // ── First & Last name row ─────────────────────────────
               Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel(label: 'First name'),
+                        _FieldLabel(label: 'First name', tc: tc),
                         const SizedBox(height: 8),
                         _InputField(
                           controller: _firstNameController,
@@ -131,6 +122,7 @@ class _SignUpState extends State<SignUp> {
                           hintText: 'John',
                           icon: Icons.person_outline_rounded,
                           keyboardType: TextInputType.name,
+                          tc: tc,
                         ),
                       ],
                     ),
@@ -140,7 +132,7 @@ class _SignUpState extends State<SignUp> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel(label: 'Last name'),
+                        _FieldLabel(label: 'Last name', tc: tc),
                         const SizedBox(height: 8),
                         _InputField(
                           controller: _lastNameController,
@@ -149,17 +141,16 @@ class _SignUpState extends State<SignUp> {
                           hintText: 'Doe',
                           icon: Icons.person_outline_rounded,
                           keyboardType: TextInputType.name,
+                          tc: tc,
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
 
-              // ── Email ─────────────────────────────────────────────
-              const _FieldLabel(label: 'Email address'),
+              _FieldLabel(label: 'Email address', tc: tc),
               const SizedBox(height: 8),
               _InputField(
                 controller: _emailController,
@@ -168,12 +159,11 @@ class _SignUpState extends State<SignUp> {
                 hintText: 'you@example.com',
                 icon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
+                tc: tc,
               ),
-
               const SizedBox(height: 20),
 
-              // ── Password ──────────────────────────────────────────
-              const _FieldLabel(label: 'Password'),
+              _FieldLabel(label: 'Password', tc: tc),
               const SizedBox(height: 8),
               _InputField(
                 controller: _passwordController,
@@ -182,6 +172,7 @@ class _SignUpState extends State<SignUp> {
                 hintText: '8+ characters',
                 icon: Icons.lock_outline_rounded,
                 obscureText: _obscurePassword,
+                tc: tc,
                 suffix: GestureDetector(
                   onTap: () => setState(() => _obscurePassword = !_obscurePassword),
                   child: Icon(
@@ -189,15 +180,13 @@ class _SignUpState extends State<SignUp> {
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                     size: 20,
-                    color: const Color(0x3DFFFFFF),
+                    color: tc.text40,
                   ),
                 ),
               ),
-
               const SizedBox(height: 20),
 
-              // ── Confirm password ──────────────────────────────────
-              const _FieldLabel(label: 'Confirm password'),
+              _FieldLabel(label: 'Confirm password', tc: tc),
               const SizedBox(height: 8),
               _InputField(
                 controller: _confirmPasswordController,
@@ -206,6 +195,7 @@ class _SignUpState extends State<SignUp> {
                 hintText: 'Repeat password',
                 icon: Icons.lock_outline_rounded,
                 obscureText: _obscureConfirmPassword,
+                tc: tc,
                 suffix: GestureDetector(
                   onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                   child: Icon(
@@ -213,83 +203,75 @@ class _SignUpState extends State<SignUp> {
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                     size: 20,
-                    color: const Color(0x3DFFFFFF),
+                    color: tc.text40,
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              // ── Password hint ─────────────────────────────────────
-              const Text(
+              Text(
                 'Use at least 8 characters with a number and a symbol.',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Color(0x40FFFFFF),
+                  color: tc.text20,
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 28),
 
-              // ── Sign up button ────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pushNamed(context, '/home'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _lime,
-                    foregroundColor: _bg,
+                    backgroundColor: tc.coreAction,
+                    foregroundColor: isDark ? const Color(0xFF141817) : Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Create account',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
-                          color: _bg,
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, size: 19, color: _bg),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 19),
                     ],
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
 
-              // ── Terms note ────────────────────────────────────────
               Center(
                 child: Text.rich(
                   TextSpan(
-                    style: const TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Color(0x3DFFFFFF),
+                      color: tc.text40,
                       height: 1.6,
                     ),
                     children: [
                       const TextSpan(text: 'By signing up you agree to our '),
                       TextSpan(
                         text: 'Terms',
-                        style: const TextStyle(
-                          color: _lime,
+                        style: GoogleFonts.inter(
+                          color: tc.coreAction,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const TextSpan(text: ' and '),
                       TextSpan(
                         text: 'Privacy Policy',
-                        style: const TextStyle(
-                          color: _lime,
+                        style: GoogleFonts.inter(
+                          color: tc.coreAction,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -299,27 +281,23 @@ class _SignUpState extends State<SignUp> {
                   textAlign: TextAlign.center,
                 ),
               ),
-
               const SizedBox(height: 24),
 
-              // ── Divider ───────────────────────────────────────────
-              const Row(
+              Row(
                 children: [
-                  Expanded(child: Divider(color: Color(0x12FFFFFF), thickness: 1)),
+                  Expanded(child: Divider(color: tc.divider, thickness: 1)),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Text(
                       'or sign up with',
-                      style: TextStyle(fontSize: 12, color: Color(0x38FFFFFF)),
+                      style: GoogleFonts.inter(fontSize: 12, color: tc.text40),
                     ),
                   ),
-                  Expanded(child: Divider(color: Color(0x12FFFFFF), thickness: 1)),
+                  Expanded(child: Divider(color: tc.divider, thickness: 1)),
                 ],
               ),
-
               const SizedBox(height: 24),
 
-              // ── Social buttons ────────────────────────────────────
               Row(
                 children: [
                   Expanded(
@@ -330,40 +308,40 @@ class _SignUpState extends State<SignUp> {
                         height: 17,
                         child: CustomPaint(painter: _GooglePainter()),
                       ),
+                      tc: tc,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: _SocialButton(
                       label: 'Apple',
                       icon: Icon(
                         Icons.apple,
                         size: 20,
-                        color: Color(0x8DFFFFFF),
+                        color: tc.text100,
                       ),
+                      tc: tc,
                     ),
                   ),
                 ],
               ),
-
               const SizedBox(height: 28),
 
-              // ── Login link ────────────────────────────────────────
               Center(
                 child: GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/login'),
                   child: Text.rich(
-                    const TextSpan(
-                      style: TextStyle(
+                    TextSpan(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Color(0x47FFFFFF),
+                        color: tc.text70,
                       ),
                       children: [
-                        TextSpan(text: 'Already have an account? '),
+                        const TextSpan(text: 'Already have an account? '),
                         TextSpan(
                           text: 'Sign in',
-                          style: TextStyle(
-                            color: _lime,
+                          style: GoogleFonts.inter(
+                            color: tc.coreAction,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -372,7 +350,6 @@ class _SignUpState extends State<SignUp> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -382,10 +359,9 @@ class _SignUpState extends State<SignUp> {
   }
 }
 
-// ── Reusable widgets ──────────────────────────────────────────────────────────
-
 class _LogoRow extends StatelessWidget {
-  static const Color _lime = Color(0xFFBFFF3C);
+  final ThemeColors tc;
+  const _LogoRow({required this.tc});
 
   @override
   Widget build(BuildContext context) {
@@ -394,19 +370,19 @@ class _LogoRow extends StatelessWidget {
         SizedBox(
           width: 26,
           height: 26,
-          child: CustomPaint(painter: _HourglassPainter()),
+          child: CustomPaint(painter: _HourglassPainter(tc: tc)),
         ),
         const SizedBox(width: 8),
         RichText(
-          text: const TextSpan(
-            style: TextStyle(
+          text: TextSpan(
+            style: GoogleFonts.manrope(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
             ),
             children: [
-              TextSpan(text: 'Think', style: TextStyle(color: Colors.white)),
-              TextSpan(text: 'Pay', style: TextStyle(color: _lime)),
+              TextSpan(text: 'Think', style: TextStyle(color: tc.text100)),
+              TextSpan(text: 'Pay', style: TextStyle(color: tc.coreAction)),
             ],
           ),
         ),
@@ -416,15 +392,18 @@ class _LogoRow extends StatelessWidget {
 }
 
 class _HourglassPainter extends CustomPainter {
+  final ThemeColors tc;
+  _HourglassPainter({required this.tc});
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    final barPaint = Paint()..color = const Color(0xFF777777);
-    final topPaint = Paint()..color = const Color(0xFF555555);
-    final bottomPaint = Paint()..color = const Color(0xCCBFFF3C);
-    final dotPaint = Paint()..color = const Color(0xFFBFFF3C);
+    final barPaint = Paint()..color = tc.text40;
+    final topPaint = Paint()..color = tc.text20;
+    final bottomPaint = Paint()..color = tc.coreAction.withValues(alpha: 0.8);
+    final dotPaint = Paint()..color = tc.coreAction;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.2, h * 0.1, w * 0.6, h * 0.1), const Radius.circular(2)),
@@ -459,24 +438,25 @@ class _HourglassPainter extends CustomPainter {
 
 class _TagPill extends StatelessWidget {
   final String label;
-  const _TagPill({required this.label});
+  final ThemeColors tc;
+  const _TagPill({required this.label, required this.tc});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0x1ABFFF3C),
+        color: tc.coreActionDim,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: const Color(0x40BFFF3C)),
+        border: Border.all(color: tc.coreAction.withValues(alpha: 0.35)),
       ),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: GoogleFonts.inter(
           fontSize: 11,
-          color: Color(0xFFBFFF3C),
+          color: tc.coreAction,
           letterSpacing: 1.1,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -485,17 +465,18 @@ class _TagPill extends StatelessWidget {
 
 class _FieldLabel extends StatelessWidget {
   final String label;
-  const _FieldLabel({required this.label});
+  final ThemeColors tc;
+  const _FieldLabel({required this.label, required this.tc});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: GoogleFonts.inter(
         fontSize: 11,
-        color: Color(0x59FFFFFF),
+        color: tc.text40,
         letterSpacing: 0.99,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -510,6 +491,7 @@ class _InputField extends StatelessWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final Widget? suffix;
+  final ThemeColors tc;
 
   const _InputField({
     required this.controller,
@@ -517,6 +499,7 @@ class _InputField extends StatelessWidget {
     required this.isFocused,
     required this.hintText,
     required this.icon,
+    required this.tc,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.suffix,
@@ -528,16 +511,17 @@ class _InputField extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       height: 54,
       decoration: BoxDecoration(
-        color: isFocused ? const Color(0x0ABFFF3C) : const Color(0x0DFFFFFF),
+        color: isFocused ? tc.surface2 : tc.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isFocused ? const Color(0x73BFFF3C) : const Color(0x12FFFFFF),
+          color: isFocused ? tc.coreAction : tc.border,
+          width: 0.8,
         ),
       ),
       child: Row(
         children: [
           const SizedBox(width: 16),
-          Icon(icon, size: 20, color: const Color(0x40FFFFFF)),
+          Icon(icon, size: 20, color: isFocused ? tc.coreAction : tc.text40),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
@@ -545,10 +529,10 @@ class _InputField extends StatelessWidget {
               focusNode: focusNode,
               obscureText: obscureText,
               keyboardType: keyboardType,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              style: GoogleFonts.inter(color: tc.text100, fontSize: 15),
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: const TextStyle(color: Color(0x2EFFFFFF), fontSize: 15),
+                hintStyle: GoogleFonts.inter(color: tc.text20, fontSize: 15),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -568,17 +552,18 @@ class _InputField extends StatelessWidget {
 class _SocialButton extends StatelessWidget {
   final String label;
   final Widget icon;
+  final ThemeColors tc;
 
-  const _SocialButton({required this.label, required this.icon});
+  const _SocialButton({required this.label, required this.icon, required this.tc});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 50,
       decoration: BoxDecoration(
-        color: const Color(0x0AFFFFFF),
+        color: tc.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x12FFFFFF)),
+        border: Border.all(color: tc.border, width: 0.8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -587,7 +572,7 @@ class _SocialButton extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(fontSize: 13, color: Color(0x8DFFFFFF)),
+            style: GoogleFonts.inter(fontSize: 13, color: tc.text70, fontWeight: FontWeight.w600),
           ),
         ],
       ),
