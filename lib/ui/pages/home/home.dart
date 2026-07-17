@@ -169,13 +169,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 balance: balance,
                 income: income,
                 expenses: expenses,
+                goalProgress: _provider.goals.isEmpty
+                    ? 0.0
+                    : _provider.goals.fold(0.0, (s, g) => s + g.savedAmount) /
+                          _provider.goals.fold(
+                            0.0,
+                            (s, g) => s + g.targetAmount,
+                          ),
                 tc: tc,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               CommunityUpdatesSection(tc: tc),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 10),
 
               // ── Recent transactions ─────────────────────────────────────
               Row(
