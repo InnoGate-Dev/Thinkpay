@@ -199,8 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      transactionFilterNotifier.value = null;
-                      appShellIndexNotifier.value = 3;
+                      Navigator.pushNamed(context, '/transaction');
                     },
                     child: Text(
                       'See all',
