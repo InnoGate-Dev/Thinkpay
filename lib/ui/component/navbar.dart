@@ -89,7 +89,6 @@ class _AppShellState extends State<AppShell>
     final tc = ThemeColors.of(context);
     return Scaffold(
       backgroundColor: tc.background,
-      extendBody: true,
       onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
       drawer: const Drawer(child: ProfileDrawer()),
 

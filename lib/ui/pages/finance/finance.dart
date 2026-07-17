@@ -100,9 +100,12 @@ class _FinancePageState extends State<FinancePage>
             onPressed: _openAddBudget,
             backgroundColor: tc.coreAction,
             foregroundColor: tc.background,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: const Icon(Icons.add_rounded, size: 24),
           ),
+
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
             bottom: false,
@@ -111,7 +114,7 @@ class _FinancePageState extends State<FinancePage>
               children: [
                 // ── Header ───────────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   child: Text(
                     'Finance',
                     style: GoogleFonts.manrope(
@@ -122,7 +125,6 @@ class _FinancePageState extends State<FinancePage>
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
 
                 // ── Pill segmented control tabs ──────────────────────────────
                 Padding(
@@ -255,11 +257,12 @@ class _FinanceTab extends StatelessWidget {
       children: [
         // ── Totals summary ─────────────────────────────────────────────────
         _SummaryRow(
-            budgets: budgets,
-            actualMap: actualMap,
-            accent: accentColor,
-            type: type,
-            tc: tc),
+          budgets: budgets,
+          actualMap: actualMap,
+          accent: accentColor,
+          type: type,
+          tc: tc,
+        ),
         const SizedBox(height: 16),
 
         // ── Donut chart ────────────────────────────────────────────────────
@@ -277,7 +280,7 @@ class _FinanceTab extends StatelessWidget {
                         color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
-                      )
+                      ),
                     ],
             ),
             child: Column(
@@ -294,67 +297,76 @@ class _FinanceTab extends StatelessWidget {
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 180,
-                  child: Row(children: [
-                    Expanded(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          PieChart(PieChartData(
-                            sections: pieSections,
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 52,
-                          )),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${pieSections.length}',
-                                style: GoogleFonts.manrope(
-                                  color: tc.text100,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                'categories',
-                                style: GoogleFonts.inter(
-                                  color: tc.text40,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: List.generate(
-                        catLabels.length,
-                        (i) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: AppColors.chart[i % AppColors.chart.length],
-                                borderRadius: BorderRadius.circular(2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            PieChart(
+                              PieChartData(
+                                sections: pieSections,
+                                sectionsSpace: 2,
+                                centerSpaceRadius: 52,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              catLabels[i],
-                              style: GoogleFonts.inter(
-                                  color: tc.text70, fontSize: 12),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${pieSections.length}',
+                                  style: GoogleFonts.manrope(
+                                    color: tc.text100,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  'categories',
+                                  style: GoogleFonts.inter(
+                                    color: tc.text40,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ]),
+                          ],
                         ),
                       ),
-                    ),
-                  ]),
+                      const SizedBox(width: 16),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: List.generate(
+                          catLabels.length,
+                          (i) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: AppColors
+                                        .chart[i % AppColors.chart.length],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  catLabels[i],
+                                  style: GoogleFonts.inter(
+                                    color: tc.text70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -393,26 +405,34 @@ class _FinanceTab extends StatelessWidget {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.pie_chart_outline_rounded,
-                      color: tc.text20, size: 36),
+                  Icon(
+                    Icons.pie_chart_outline_rounded,
+                    color: tc.text20,
+                    size: 36,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     'No budget categories yet.\nTap + to create one.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                        color: tc.text40, fontSize: 13, height: 1.6),
+                      color: tc.text40,
+                      fontSize: 13,
+                      height: 1.6,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-        ...budgets.map((b) => _FinanceCard(
-              b: b,
-              actual: actualMap[b.name] ?? 0.0,
-              accentColor: accentColor,
-              tc: tc,
-            )),
+        ...budgets.map(
+          (b) => _FinanceCard(
+            b: b,
+            actual: actualMap[b.name] ?? 0.0,
+            accentColor: accentColor,
+            tc: tc,
+          ),
+        ),
       ],
     );
   }
@@ -450,7 +470,9 @@ class _FinanceCard extends StatelessWidget {
         title: Text(
           'Delete Category',
           style: GoogleFonts.manrope(
-              color: tc.text100, fontWeight: FontWeight.w700),
+            color: tc.text100,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         content: Text(
           'Remove "${b.name}" from your budget?',
@@ -459,16 +481,17 @@ class _FinanceCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child:
-                Text('Cancel', style: GoogleFonts.inter(color: tc.text40)),
+            child: Text('Cancel', style: GoogleFonts.inter(color: tc.text40)),
           ),
           TextButton(
             onPressed: () {
               FinanceProvider().deleteBudget(b.id);
               Navigator.pop(ctx);
             },
-            child: Text('Delete',
-                style: GoogleFonts.inter(color: tc.accentExpense)),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: tc.accentExpense),
+            ),
           ),
         ],
       ),
@@ -489,9 +512,7 @@ class _FinanceCard extends StatelessWidget {
         color: tc.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: over
-              ? tc.accentExpense.withValues(alpha: 0.35)
-              : tc.border,
+          color: over ? tc.accentExpense.withValues(alpha: 0.35) : tc.border,
           width: 0.8,
         ),
         boxShadow: isDark
@@ -501,7 +522,7 @@ class _FinanceCard extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
       ),
       child: Padding(
@@ -509,68 +530,92 @@ class _FinanceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Expanded(
-                child: Text(
-                  b.name,
-                  style: GoogleFonts.inter(
-                    color: tc.text100,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (over)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: tc.accentExpenseDim,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    'Over budget',
+                    b.name,
                     style: GoogleFonts.inter(
-                      color: tc.accentExpense,
-                      fontSize: 10,
+                      color: tc.text100,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              const SizedBox(width: 4),
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, color: tc.text40, size: 18),
-                color: tc.surface2,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                onSelected: (v) {
-                  if (v == 'edit') _openEdit(context);
-                  if (v == 'delete') _confirmDelete(context);
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(children: [
-                      Icon(Icons.edit_outlined, color: tc.coreAction, size: 16),
-                      const SizedBox(width: 8),
-                      Text('Edit',
-                          style: GoogleFonts.inter(color: tc.text100)),
-                    ]),
+                if (over)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tc.accentExpenseDim,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Over budget',
+                      style: GoogleFonts.inter(
+                        color: tc.accentExpense,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(children: [
-                      Icon(Icons.delete_outline_rounded,
-                          color: tc.accentExpense, size: 16),
-                      const SizedBox(width: 8),
-                      Text('Delete',
-                          style: GoogleFonts.inter(color: tc.accentExpense)),
-                    ]),
+                const SizedBox(width: 4),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: tc.text40,
+                    size: 18,
                   ),
-                ],
-              ),
-            ]),
+                  color: tc.surface2,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  onSelected: (v) {
+                    if (v == 'edit') _openEdit(context);
+                    if (v == 'delete') _confirmDelete(context);
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.edit_outlined,
+                            color: tc.coreAction,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit',
+                            style: GoogleFonts.inter(color: tc.text100),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            color: tc.accentExpense,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: GoogleFonts.inter(color: tc.accentExpense),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
 
             // Progress bar with percentage
@@ -613,8 +658,7 @@ class _FinanceCard extends StatelessWidget {
                 ),
                 Text(
                   'of Rs. ${_fmt(expected)}',
-                  style: GoogleFonts.inter(
-                      color: tc.text40, fontSize: 12),
+                  style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
                 ),
               ],
             ),
@@ -643,10 +687,14 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final totalExpected =
-        budgets.fold<double>(0, (s, b) => s + b.expectedAmount);
-    final totalActual =
-        budgets.fold<double>(0, (s, b) => s + (actualMap[b.name] ?? 0));
+    final totalExpected = budgets.fold<double>(
+      0,
+      (s, b) => s + b.expectedAmount,
+    );
+    final totalActual = budgets.fold<double>(
+      0,
+      (s, b) => s + (actualMap[b.name] ?? 0),
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -661,62 +709,81 @@ class _SummaryRow extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 12,
                   offset: const Offset(0, 3),
-                )
+                ),
               ],
       ),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Planned',
-                style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
-            const SizedBox(height: 4),
-            Text(
-              'Rs. ${_fmt(totalExpected)}',
-              style: GoogleFonts.manrope(
-                color: tc.text100,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Planned',
+                  style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Rs. ${_fmt(totalExpected)}',
+                  style: GoogleFonts.manrope(
+                    color: tc.text100,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
             ),
-          ]),
-        ),
-        Container(
-          width: 0.5,
-          height: 36,
-          color: tc.border,
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        Expanded(
-          child: InkWell(
-            onTap: () {
-              // Assuming transactionFilterNotifier is defined in Trasections.dart or similar
-              Navigator.pushNamed(context, '/transaction');
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ),
+          Container(
+            width: 0.5,
+            height: 36,
+            color: tc.border,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                transactionFilterNotifier.value = type;
+                Navigator.pushNamed(context, '/transaction');
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Actual',
-                      style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
-                  Icon(Icons.chevron_right_rounded, color: tc.text40, size: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Actual',
+                        style: GoogleFonts.inter(
+                          color: tc.text40,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: tc.text40,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs. ${_fmt(totalActual)}',
+                    style: GoogleFonts.manrope(
+                      color: accent,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Rs. ${_fmt(totalActual)}',
-                style: GoogleFonts.manrope(
-                  color: accent,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ]),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

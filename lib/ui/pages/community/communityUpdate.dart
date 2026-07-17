@@ -1,6 +1,6 @@
 import 'package:Thinkpay/constant/app_colors.dart';
-import 'package:Thinkpay/ui/component/news_category_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CommunityUpdatePage extends StatefulWidget {
   const CommunityUpdatePage({super.key});
@@ -10,37 +10,59 @@ class CommunityUpdatePage extends StatefulWidget {
 }
 
 class _CommunityUpdatePageState extends State<CommunityUpdatePage> {
-  String selectedCategory = 'Investing';
-
-  final List<String> categories = [
-    'All Discussions',
-    'Investing',
-    'Business & Side',
+  // Mock data for followed channels
+  final List<Channel> followedChannels = [
+    Channel(
+      name: 'Investing 101',
+      lastMessage: 'Here are top 5 ETFs for 2026 📈',
+      time: '10:45 AM',
+      unreadCount: 3,
+      avatarUrl: 'https://i.pravatar.cc/150?img=11',
+      isVerified: true,
+    ),
+    Channel(
+      name: 'Tech & Finance',
+      lastMessage: 'Apple just announced new features...',
+      time: 'Yesterday',
+      unreadCount: 0,
+      avatarUrl: 'https://i.pravatar.cc/150?img=12',
+      isVerified: true,
+    ),
+    Channel(
+      name: 'Startup Founders',
+      lastMessage: 'How to pitch to VCs effectively',
+      time: 'Monday',
+      unreadCount: 5,
+      avatarUrl: 'https://i.pravatar.cc/150?img=13',
+      isVerified: false,
+    ),
   ];
 
-  final List<CommunityPost> posts = [
-    CommunityPost(
-      author: 'Marcus J.',
-      badge: 'High Impact Contributor',
-      title: 'The psychological barrier of the first \$10k invested',
-      snippet:
-          'Reaching your first \$10,000 in investments often feels significantly harder than reaching \$50,000. It require...',
-      helpfulCount: 12,
+  // Mock data for suggested channels
+  final List<Channel> exploreChannels = [
+    Channel(
+      name: 'Real Estate Hub',
+      followersCount: '1.2M followers',
+      avatarUrl: 'https://i.pravatar.cc/150?img=21',
+      isVerified: true,
     ),
-    CommunityPost(
-      author: 'Sarah K.',
-      title: 'Index Funds vs. Individual Stocks: Finding Mental Peace',
-      snippet:
-          'After years of trying to pick individual stocks and constantly checking market tickers, I shifted 90% of my portfolio to...',
-      helpfulCount: 45,
+    Channel(
+      name: 'Daily Crypto',
+      followersCount: '850K followers',
+      avatarUrl: 'https://i.pravatar.cc/150?img=22',
+      isVerified: false,
     ),
-    CommunityPost(
-      author: 'Elena R.',
-      badge: 'High Impact Contributor',
-      title: 'Rethinking emergency funds in a high-inflation environment',
-      snippet:
-          'Keeping 6-12 months of expenses purely in cash feels secure, but with rising inflation, it\'s losing purchasing power...',
-      helpfulCount: 28,
+    Channel(
+      name: 'Personal Finance',
+      followersCount: '2.5M followers',
+      avatarUrl: 'https://i.pravatar.cc/150?img=23',
+      isVerified: true,
+    ),
+    Channel(
+      name: 'Stock Market',
+      followersCount: '500K followers',
+      avatarUrl: 'https://i.pravatar.cc/150?img=24',
+      isVerified: true,
     ),
   ];
 
@@ -50,287 +72,301 @@ class _CommunityUpdatePageState extends State<CommunityUpdatePage> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: colors.surface3,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.person_outline, color: colors.text70, size: 20),
-          ),
-        ),
-        title: Text(
-          'DayOne',
-          style: AppTypography.headlineMd.copyWith(
-            color: colors.text100,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.chat_bubble_outline, color: colors.text100),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Channels Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.marginMobile,
+                vertical: AppSpacing.sm,
+              ),
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  child: Text(
+                    'Community',
+                    style: GoogleFonts.manrope(
+                      color: colors.text100,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+
+            ),
+
+            // Followed Channels List
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: followedChannels.length,
+              itemBuilder: (context, index) {
+                return _ChannelListTile(channel: followedChannels[index]);
+              },
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.marginMobile,
+                vertical: AppSpacing.sm,
+              ),
+              child: Divider(color: colors.divider),
+            ),
+
+            // Find Channels Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.marginMobile,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Find channels',
+                    style: AppTypography.bodyMd.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colors.text100,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'See all',
+                      style: AppTypography.bodySm.copyWith(
+                        color: colors.coreAction,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            // Categories
+
+            // Horizontal Explore Channels
             SizedBox(
-              height: 48,
+              height: 200,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.marginMobile),
-                itemCount: categories.length,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.marginMobile,
+                ),
+                itemCount: exploreChannels.length,
                 itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final isSelected = selectedCategory == category;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (_) {
-                        setState(() {
-                          selectedCategory = category;
-                        });
-                      },
-                      selectedColor: const Color(0xFF90A494), // Muted sage green from image
-                      backgroundColor: colors.surface3,
-                      labelStyle: AppTypography.bodySm.copyWith(
-                        color: isSelected ? Colors.white : colors.text70,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                      ),
-                      side: BorderSide.none,
-                      showCheckmark: false,
-                    ),
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    child: _ExploreChannelCard(channel: exploreChannels[index]),
                   );
                 },
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            // Ask a question button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.marginMobile),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.base),
-                    border: Border.all(color: colors.border),
-                  ),
-                  child: TextButton.icon(
-                    onPressed: () {},
-                    icon: Icon(Icons.mode_comment_outlined, size: 16, color: colors.text100),
-                    label: Text(
-                      'Ask a question',
-                      style: AppTypography.bodySm.copyWith(
-                        color: colors.text100,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            // Posts List
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.marginMobile),
-              itemCount: posts.length,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                return _PostCard(post: posts[index]);
-              },
-            ),
-            const SizedBox(height: 120), // Space for bottom nav
+
+            const SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
-      bottomNavigationBar: _CustomBottomNavBar(colors: colors),
     );
   }
 }
 
-class _CustomBottomNavBar extends StatelessWidget {
-  final ThemeColors colors;
-  const _CustomBottomNavBar({required this.colors});
+class _ChannelListTile extends StatelessWidget {
+  final Channel channel;
+
+  const _ChannelListTile({required this.channel});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 8, bottom: 20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(top: BorderSide(color: colors.divider)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavBarItem(icon: Icons.home_outlined, label: 'Home', isSelected: false, colors: colors),
-          _NavBarItem(icon: Icons.account_balance_wallet_outlined, label: 'Finances', isSelected: false, colors: colors),
-          _NavBarItem(icon: Icons.people_alt_rounded, label: 'Community', isSelected: true, colors: colors),
-          _NavBarItem(icon: Icons.menu_book_outlined, label: 'Learn', isSelected: false, colors: colors),
-        ],
-      ),
-    );
-  }
-}
+    final colors = ThemeColors.of(context);
 
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final ThemeColors colors;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isSelected)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFD6E9E0), // Very light green highlight
-              borderRadius: BorderRadius.circular(AppRadius.full),
-            ),
-            child: Icon(icon, color: const Color(0xFF4A6657), size: 24),
-          )
-        else
-          Icon(icon, color: colors.text40, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: AppTypography.labelCaps.copyWith(
-            fontSize: 10,
-            color: isSelected ? const Color(0xFF4A6657) : colors.text40,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
+    return InkWell(
+      onTap: () {},
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.marginMobile,
+          vertical: 12,
         ),
-      ],
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 26,
+              backgroundImage: NetworkImage(channel.avatarUrl),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          channel.name,
+                          style: AppTypography.bodyLg.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colors.text100,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (channel.isVerified) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.verified,
+                          color: colors.coreAction,
+                          size: 16,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    channel.lastMessage ?? '',
+                    style: AppTypography.bodyMd.copyWith(color: colors.text70),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // Trailing
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (channel.time != null)
+                  Text(
+                    channel.time!,
+                    style: AppTypography.bodySm.copyWith(
+                      color: (channel.unreadCount ?? 0) > 0
+                          ? colors.coreAction
+                          : colors.text40,
+                      fontWeight: (channel.unreadCount ?? 0) > 0
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                if ((channel.unreadCount ?? 0) > 0)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: colors.coreAction,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${channel.unreadCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _PostCard extends StatelessWidget {
-  final CommunityPost post;
+class _ExploreChannelCard extends StatelessWidget {
+  final Channel channel;
 
-  const _PostCard({required this.post});
+  const _ExploreChannelCard({required this.channel});
 
   @override
   Widget build(BuildContext context) {
     final colors = ThemeColors.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      width: 140,
+      padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
+          Stack(
             children: [
-              Text(
-                post.author,
-                style: AppTypography.bodySm.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colors.text100,
-                ),
+              CircleAvatar(
+                radius: 32,
+                backgroundImage: NetworkImage(channel.avatarUrl),
               ),
-              if (post.badge != null) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: colors.surface3,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_outlined, size: 12, color: colors.text70),
-                      const SizedBox(width: 4),
-                      Text(
-                        post.badge!,
-                        style: AppTypography.labelCaps.copyWith(
-                          fontSize: 10,
-                          color: colors.text70,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
+              if (channel.isVerified)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.verified,
+                      color: colors.coreAction,
+                      size: 20,
+                    ),
                   ),
                 ),
-              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12.0),
           Text(
-            post.title,
-            style: AppTypography.headlineMd.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            channel.name,
+            style: AppTypography.bodySm.copyWith(
+              fontWeight: FontWeight.w600,
               color: colors.text100,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSpacing.base),
+          const SizedBox(height: 2),
           Text(
-            post.snippet,
+            channel.followersCount ?? '',
             style: AppTypography.bodySm.copyWith(
               color: colors.text70,
-              height: 1.5,
+              fontSize: 12,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Divider(color: colors.divider, height: 1),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Icon(Icons.thumb_up_alt_outlined, size: 16, color: colors.text40),
-              const SizedBox(width: 8),
-              Text(
-                '${post.helpfulCount} people found this helpful',
-                style: AppTypography.bodySm.copyWith(
-                  color: colors.text40,
-                  fontSize: 13,
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 32,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.limeDim,
+                foregroundColor: colors.coreAction,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
+                padding: EdgeInsets.zero,
               ),
-            ],
+              child: const Text(
+                'Follow',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
         ],
       ),
@@ -338,18 +374,22 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-class CommunityPost {
-  final String author;
-  final String? badge;
-  final String title;
-  final String snippet;
-  final int helpfulCount;
+class Channel {
+  final String name;
+  final String? lastMessage;
+  final String? time;
+  final int? unreadCount;
+  final String? followersCount;
+  final String avatarUrl;
+  final bool isVerified;
 
-  CommunityPost({
-    required this.author,
-    this.badge,
-    required this.title,
-    required this.snippet,
-    required this.helpfulCount,
+  Channel({
+    required this.name,
+    this.lastMessage,
+    this.time,
+    this.unreadCount,
+    this.followersCount,
+    required this.avatarUrl,
+    required this.isVerified,
   });
 }
