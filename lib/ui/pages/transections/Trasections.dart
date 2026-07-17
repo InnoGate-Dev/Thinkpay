@@ -45,6 +45,15 @@ class _TransectionState extends State<Transection> {
     super.dispose();
   }
 
+  void _openAddTransaction() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddTransactionSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -71,6 +80,20 @@ class _TransectionState extends State<Transection> {
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'fab_transaction',
+            onPressed: _openAddTransaction,
+            backgroundColor: tc.coreAction,
+            foregroundColor: tc.background,
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(
+              'Add Transaction',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -80,6 +103,15 @@ class _TransectionState extends State<Transection> {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   child: Row(
                     children: [
+                      GestureDetector(
+                        onTap: () {
+                          // This removes the current screen and returns to the previous one
+                          Navigator.pop(context);
+                        },
+                        child: const Icon(
+                          Icons.arrow_back_ios,
+                        ),
+                      ),
                       Expanded(
                         child: Text(
                           'Transactions',

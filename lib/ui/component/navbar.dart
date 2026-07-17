@@ -1,12 +1,11 @@
+import 'package:Thinkpay/ui/pages/community/communityUpdate.dart';
 import 'package:Thinkpay/ui/pages/goal/Goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
-import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
-import 'package:Thinkpay/ui/component/add_goal_sheet.dart';
-import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
+
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
 import 'package:Thinkpay/ui/pages/home/home.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
@@ -38,7 +37,7 @@ class _AppShellState extends State<AppShell>
     HomeScreen(),
     FinancePage(),
     Aichat(),
-    Transection(),
+    CommunityUpdatePage(),
     SetGoalPage(),
   ];
 
@@ -83,89 +82,7 @@ class _AppShellState extends State<AppShell>
     _fadeCtrl.forward();
   }
 
-  void _openAddBudget() {
-    final type = financeTabIndexNotifier.value == 0
-        ? TransactionType.expense
-        : TransactionType.income;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AddBudgetSheet(initialType: type),
-    );
-  }
 
-  void _openAddTransaction() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddTransactionSheet(),
-    );
-  }
-
-  void _openAddGoal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddGoalSheet(),
-    );
-  }
-
-  /// Returns the FAB widget for the current page, or null for pages without one.
-  Widget? _fabFor(ThemeColors tc) {
-    switch (_currentIndex) {
-      case 0: // Home
-        return FloatingActionButton(
-          heroTag: 'fab_home',
-          onPressed: _openAddTransaction,
-          backgroundColor: tc.coreAction,
-          foregroundColor: tc.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: const Icon(Icons.add_rounded, size: 24),
-        );
-      case 1: // Budget
-        return FloatingActionButton(
-          heroTag: 'fab_budget',
-          onPressed: _openAddBudget,
-          backgroundColor: tc.coreAction,
-          foregroundColor: tc.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: const Icon(Icons.add_rounded, size: 24),
-        );
-      case 3: // Transactions
-        return FloatingActionButton.extended(
-          heroTag: 'fab_transaction',
-          onPressed: _openAddTransaction,
-          backgroundColor: tc.coreAction,
-          foregroundColor: tc.background,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(
-            'Add Transaction',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-        );
-      case 4: // Goals
-        return FloatingActionButton.extended(
-          heroTag: 'fab_goal',
-          onPressed: _openAddGoal,
-          backgroundColor: tc.coreAction,
-          foregroundColor: tc.background,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(
-            'New Goal',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-        );
-      default:
-        return null;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,17 +92,7 @@ class _AppShellState extends State<AppShell>
       extendBody: true,
       onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
       drawer: const Drawer(child: ProfileDrawer()),
-      floatingActionButton: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOutBack,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, anim) => ScaleTransition(
-          scale: anim,
-          child: FadeTransition(opacity: anim, child: child),
-        ),
-        child: _fabFor(tc),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
       body: FadeTransition(
         opacity: _fadeAnim,
         child: IndexedStack(
@@ -275,9 +182,9 @@ class _ThinkPayNavBar extends StatelessWidget {
                 tc: tc,
               ),
               _NavTab(
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long_rounded,
-                label: 'Transactions',
+                icon: Icons.groups_2_outlined,
+                activeIcon: Icons.groups_2,
+                label: 'Community',
                 index: 3,
                 current: currentIndex,
                 onTap: onTap,

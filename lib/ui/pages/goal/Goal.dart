@@ -30,6 +30,15 @@ class _SetGoalPageState extends State<SetGoalPage>
     super.dispose();
   }
 
+  void _openAddGoal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddGoalSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -49,6 +58,20 @@ class _SetGoalPageState extends State<SetGoalPage>
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'fab_goal',
+            onPressed: _openAddGoal,
+            backgroundColor: tc.coreAction,
+            foregroundColor: tc.background,
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(
+              'New Goal',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

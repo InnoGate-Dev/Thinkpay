@@ -6,6 +6,7 @@ import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';
 import 'package:Thinkpay/ui/pages/auth/login.dart';
 import 'package:Thinkpay/ui/pages/auth/signup.dart';
 import 'package:Thinkpay/model/news_model.dart';
+import 'package:Thinkpay/ui/pages/community/communityUpdate.dart';
 import 'package:Thinkpay/ui/pages/news/news-details.dart';
 import 'package:Thinkpay/ui/pages/news/news.dart';
 import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
@@ -14,6 +15,7 @@ import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/startupScreen.dart';
 import 'package:Thinkpay/ui/pages/support/support.dart';
 import 'package:Thinkpay/ui/pages/Notification.dart';
+import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
@@ -32,7 +34,7 @@ class ThinkPay extends StatelessWidget {
       listenable: ThemeNotifier(),
       builder: (context, _) {
         return MaterialApp(
-          title: 'ThinkPay',
+          title: 'DayOne',
           debugShowCheckedModeBanner: false,
           theme:      AppTheme.light(),
           darkTheme:  AppTheme.dark(),
@@ -58,9 +60,11 @@ final routes = <String, WidgetBuilder>{
   '/editprofile': (context) => const EditProfilePage(),
   '/security':    (context) => const SecurityPage(),
   '/support':     (context) => const SupportPage(),
-  '/transaction': (context) => const AppShell(initialIndex: 3),
+  '/transaction': (context) => Transection(),
   '/news': (context) => const NewsPage(),
   '/news-details': (context) => NewsDetailsPage(
         news: ModalRoute.of(context)!.settings.arguments as NewsModel,
       ),
+  '/community-update': (context) => CommunityUpdatePage(),
+
 };

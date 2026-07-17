@@ -22,6 +22,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final _provider = FinanceProvider();
   final _profileStore = UserProfileStore();
 
+  void _openAddTransaction() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddTransactionSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -44,6 +53,15 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'fab_home',
+            onPressed: _openAddTransaction,
+            backgroundColor: tc.coreAction,
+            foregroundColor: tc.background,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.add_rounded, size: 24),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           appBar: AppBar(
             leading: IconButton(
               onPressed: () => Scaffold.of(context).openDrawer(),

@@ -40,6 +40,18 @@ class _FinancePageState extends State<FinancePage>
     super.dispose();
   }
 
+  void _openAddBudget() {
+    final type = _tab.index == 0
+        ? TransactionType.expense
+        : TransactionType.income;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddBudgetSheet(initialType: type),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -83,6 +95,15 @@ class _FinancePageState extends State<FinancePage>
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'fab_budget',
+            onPressed: _openAddBudget,
+            backgroundColor: tc.coreAction,
+            foregroundColor: tc.background,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.add_rounded, size: 24),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -669,8 +690,8 @@ class _SummaryRow extends StatelessWidget {
         Expanded(
           child: InkWell(
             onTap: () {
-              transactionFilterNotifier.value = type;
-              appShellIndexNotifier.value = 3; // Index of Transactions tab
+              // Assuming transactionFilterNotifier is defined in Trasections.dart or similar
+              Navigator.pushNamed(context, '/transaction');
             },
             borderRadius: BorderRadius.circular(10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
