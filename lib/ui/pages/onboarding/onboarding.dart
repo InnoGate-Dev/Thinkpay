@@ -39,7 +39,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            _StepIndicator(currentStep: _currentStep, totalSteps: 3, tc: tc),
+            _StepIndicator(currentStep: _currentStep, totalSteps: 2, tc: tc),
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -48,7 +48,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 children: [
                   _WelcomeStep(onNext: _nextPage, tc: tc),
                   _FocusAreasStep(onNext: _nextPage, tc: tc),
-                  _GoalStep(onNext: _nextPage, tc: tc),
                 ],
               ),
             ),
@@ -115,11 +114,32 @@ class _WelcomeStep extends StatelessWidget {
               color: tc.intelligenceAccentDim,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 32),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 32),
+                Column(
+                  children: [
+                    Text(
+                      'DayOne',
+                      style: GoogleFonts.manrope(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: tc.text100,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      'The society of 1%',
+                      style: AppTypography.bodyMd.copyWith(color: tc.text70),
+                    ),
+                  ],
+                )
+              ],
+            ),
           ),
           const SizedBox(height: 32),
           Text(
-            'Build your finances.\nBuild yourself.',
+            'Build your Deciplene.\nBuild yourself.',
             style: AppTypography.display.copyWith(
               color: tc.text100,
               height: 1.1,
@@ -127,7 +147,9 @@ class _WelcomeStep extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Society of 1% helps you master your money with AI-powered insights and simple tracking.',
+            'DayOne helps you to build yourself, financial deciplene and achieving your goals. '
+            'No destraction, absolute focuse'
+                'Ai chat allows you to make right financial decisions based on your numbers effertleessly.',
             style: AppTypography.bodyMd.copyWith(color: tc.text70),
           ),
           const Spacer(flex: 2),
@@ -220,74 +242,7 @@ class _FocusAreasStepState extends State<_FocusAreasStep> {
   }
 }
 
-class _GoalStep extends StatefulWidget {
-  final VoidCallback onNext;
-  final ThemeColors tc;
 
-  const _GoalStep({required this.onNext, required this.tc});
-
-  @override
-  State<_GoalStep> createState() => _GoalStepState();
-}
-
-class _GoalStepState extends State<_GoalStep> {
-  final _nameController = TextEditingController();
-  final _amountController = TextEditingController();
-  final _dateController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _amountController.dispose();
-    _dateController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Set a financial goal.',
-            style: AppTypography.headlineLg.copyWith(color: widget.tc.text100),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Start small. What are you saving for?',
-            style: AppTypography.bodyMd.copyWith(color: widget.tc.text70),
-          ),
-          const SizedBox(height: 32),
-          _Label('Goal Name'),
-          _TextField(controller: _nameController, hint: 'e.g. Emergency Fund', tc: widget.tc),
-          const SizedBox(height: 20),
-          _Label('Target Amount'),
-          _TextField(
-            controller: _amountController,
-            hint: '0.00',
-            keyboardType: TextInputType.number,
-            isAmount: true,
-            tc: widget.tc,
-          ),
-          const SizedBox(height: 20),
-          _Label('Target Date'),
-          _TextField(
-            controller: _dateController,
-            hint: 'MM / YYYY',
-            tc: widget.tc,
-            onTap: () async {
-              // Simple date picker simulation or implementation
-            },
-          ),
-          const Spacer(),
-          _PrimaryButton(label: 'Complete Setup', onPressed: widget.onNext, tc: widget.tc),
-        ],
-      ),
-    );
-  }
-}
 
 class _SuccessScreen extends StatelessWidget {
   final ThemeColors tc;

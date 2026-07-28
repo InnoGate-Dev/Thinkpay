@@ -79,7 +79,7 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Master your money with AI-powered insights and a focused, non-distracting community.',
+                    'Personal development with AI-powered insights and a focused, non-distracting community.',
                     style: AppTypography.bodyLg.copyWith(
                       color: tc.text70,
                       height: 1.5,
@@ -144,7 +144,7 @@ class _Logo extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Text(
-          'Society of 1%',
+          'DayOne',
           style: GoogleFonts.manrope(
             fontSize: 20,
             fontWeight: FontWeight.w800,
