@@ -107,39 +107,43 @@ class _WelcomeStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Spacer(),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: tc.intelligenceAccentDim,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 32),
-                Column(
-                  children: [
-                    Text(
-                      'DayOne',
-                      style: GoogleFonts.manrope(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: tc.text100,
-                        letterSpacing: -0.5,
-                      ),
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: tc.intelligenceAccentDim,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 28),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DayOne',
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: tc.text100,
+                      letterSpacing: -0.5,
                     ),
-                    Text(
-                      'The society of 1%',
-                      style: AppTypography.bodyMd.copyWith(color: tc.text70),
-                    ),
-                  ],
-                )
-              ],
-            ),
+                  ),
+                  Text(
+                    'The society of 1%',
+                    style: AppTypography.bodyMd.copyWith(color: tc.text70),
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 32),
           Text(
-            'Build your Deciplene.\nBuild yourself.',
+            'Build your Discipline.\nBuild yourself.',
             style: AppTypography.display.copyWith(
               color: tc.text100,
               height: 1.1,
@@ -147,9 +151,9 @@ class _WelcomeStep extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'DayOne helps you to build yourself, financial deciplene and achieving your goals. '
-            'No destraction, absolute focuse'
-                'Ai chat allows you to make right financial decisions based on your numbers effertleessly.',
+            'DayOne helps you build yourself, financial discipline, and achieve your goals. '
+            'No distractions, absolute focus. '
+            'AI chat allows you to make the right financial decisions based on your numbers effortlessly.',
             style: AppTypography.bodyMd.copyWith(color: tc.text70),
           ),
           const Spacer(flex: 2),
@@ -291,67 +295,7 @@ class _SuccessScreen extends StatelessWidget {
   }
 }
 
-class _Label extends StatelessWidget {
-  final String text;
-  const _Label(this.text);
-  @override
-  Widget build(BuildContext context) {
-    final tc = ThemeColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4),
-      child: Text(
-        text.toUpperCase(),
-        style: AppTypography.labelCaps.copyWith(color: tc.text40, fontSize: 10),
-      ),
-    );
-  }
-}
 
-class _TextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final TextInputType keyboardType;
-  final bool isAmount;
-  final VoidCallback? onTap;
-  final ThemeColors tc;
-
-  const _TextField({
-    required this.controller,
-    required this.hint,
-    this.keyboardType = TextInputType.text,
-    this.isAmount = false,
-    this.onTap,
-    required this.tc,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: tc.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: tc.border),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        onTap: onTap,
-        readOnly: onTap != null,
-        style: isAmount
-            ? AppTypography.dataMono.copyWith(color: tc.text100, fontSize: 18)
-            : AppTypography.bodyMd.copyWith(color: tc.text100),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTypography.bodyMd.copyWith(color: tc.text20),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          prefixText: isAmount ? 'Rs. ' : null,
-          prefixStyle: AppTypography.dataMono.copyWith(color: tc.text40, fontSize: 18),
-        ),
-      ),
-    );
-  }
-}
 
 class _PrimaryButton extends StatelessWidget {
   final String label;
