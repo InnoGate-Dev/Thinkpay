@@ -1,5 +1,5 @@
-import 'package:Thinkpay/constant/app_colors.dart';
-import 'package:Thinkpay/constant/theme_provider.dart';
+import '../../core/constant/app_colors.dart';
+import '../../core/constant/theme_provider.dart';
 import 'package:Thinkpay/ui/component/navbar.dart';
 import 'package:Thinkpay/ui/pages/Splash_screen.dart';
 import 'package:Thinkpay/ui/pages/auth/forgetpass.dart';

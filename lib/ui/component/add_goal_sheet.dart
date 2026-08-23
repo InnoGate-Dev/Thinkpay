@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import '../../core/constant/app_colors.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 

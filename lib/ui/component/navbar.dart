@@ -3,7 +3,7 @@ import 'package:Thinkpay/ui/pages/goal/Goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import '../../core/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
