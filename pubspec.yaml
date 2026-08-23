@@ -41,6 +41,8 @@ dependencies:
   floating_navbar: ^3.0.0
   fl_chart: ^0.69.0
   google_fonts: ^8.1.0
+  dio: ^5.4.0
+  logger: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -99,14 +101,14 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "lib/assets/logo_1.png"
+  image_path: "lib/assets/logo_2.png"
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#c1ff72"
+  color: "#ffffff"
   image: lib/assets/logo_1.png
   android: true
   ios: true
   android_12:
-    color: "#c1ff72"
+    color: "#ffffff"
     image: lib/assets/logo_1.png
