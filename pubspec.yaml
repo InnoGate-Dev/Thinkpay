@@ -45,6 +45,8 @@ dependencies:
   logger: ^2.0.0
   shared_preferences: ^2.2.2
   firebase_core: ^4.13.0
+  cloudinary_flutter: ^1.0.0
+  cloudinary_url_gen: ^1.0.0
 
 dev_dependencies:
   flutter_test:

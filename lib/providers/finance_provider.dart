@@ -13,16 +13,16 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   // ── Internal state ─────────────────────────────────────────────────────────
-  final List<TransactionModel> _transactions = [];
+  final List<Transaction> _transactions = [];
   final List<BudgetCategory>   _budgets      = [];
   final List<ChatMessage>      _messages     = [];
-  final List<GoalModel>        _goals        = [];
+  final List<Goal>        _goals        = [];
 
   // ── Public accessors ───────────────────────────────────────────────────────
-  List<TransactionModel> get transactions => List.unmodifiable(_transactions);
+  List<Transaction> get transactions => List.unmodifiable(_transactions);
   List<BudgetCategory>   get budgets      => List.unmodifiable(_budgets);
   List<ChatMessage>      get messages     => List.unmodifiable(_messages);
-  List<GoalModel>        get goals        => List.unmodifiable(_goals);
+  List<Goal>        get goals        => List.unmodifiable(_goals);
 
   // ── Computed ───────────────────────────────────────────────────────────────
   double get totalIncome =>
