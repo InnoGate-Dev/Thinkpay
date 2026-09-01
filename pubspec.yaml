@@ -47,8 +47,10 @@ dependencies:
   firebase_core: ^4.13.0
   cloudinary_flutter: ^1.0.0
   cloudinary_url_gen: ^1.0.0
-  firebase_auth: ^5.0.0
+  firebase_auth: ^6.6.1
   google_sign_in: ^6.2.0
+  flutter_secure_storage: ^11.0.0
+  cupertino_calendar_picker: ^2.2.6
 
 dev_dependencies:
   flutter_test:

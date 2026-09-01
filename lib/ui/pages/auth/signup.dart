@@ -16,6 +16,7 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _birthdayController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _socialMediaController = TextEditingController();
@@ -47,6 +48,7 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
     _leaderCardController.dispose();
     _nameController.dispose();
     _emailController.dispose();
+    _birthdayController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _socialMediaController.dispose();
@@ -64,15 +66,48 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
 
   Future<void> _pickBirthday() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final DateTime initialDate =
+        _birthday ?? DateTime(now.year - 18, now.month, now.day);
+    final DateTime firstDate = DateTime(1900);
+    final DateTime lastDate = DateTime(now.year - 13, now.month, now.day);
+
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(now.year - 18, now.month, now.day),
-      firstDate: DateTime(1900),
-      lastDate: DateTime(now.year - 13),
+      initialDate: initialDate.isAfter(lastDate) ? lastDate : initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       helpText: 'Select your birthday',
+      builder: (context, child) {
+        final tc = ThemeColors.of(context);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark
+                ? ColorScheme.dark(
+                    primary: tc.intelligenceAccent,
+                    onPrimary: Colors.white,
+                    surface: tc.surface,
+                    onSurface: tc.text100,
+                  )
+                : ColorScheme.light(
+                    primary: tc.intelligenceAccent,
+                    onPrimary: Colors.white,
+                    surface: tc.surface,
+                    onSurface: tc.text100,
+                  ),
+            dialogBackgroundColor: tc.surface,
+          ),
+          child: child!,
+        );
+      },
     );
+
     if (picked != null) {
-      setState(() => _birthday = picked);
+      setState(() {
+        _birthday = picked;
+        _birthdayController.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
     }
   }
 
@@ -87,7 +122,7 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
 
     setState(() => _isLoading = true);
     try {
-      await UserRepository().register(
+      final response = await UserRepository().register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -100,16 +135,30 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
                 : null,
       );
 
+      debugPrint('SIGNUP: token="${response.token}" user=${response.user?.name}');
       if (!mounted) return;
-      if (_selectedRole == _UserRole.leader) {
-        Navigator.pushNamed(context, '/create-community');
+      if (response.token.isNotEmpty) {
+        if (_selectedRole == _UserRole.leader) {
+          Navigator.pushNamed(context, '/create-community');
+        } else {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
       } else {
-        Navigator.pushReplacementNamed(context, '/onboarding');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign-up failed: empty token received.'),
+            duration: Duration(seconds: 6),
+          ),
+        );
       }
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('SIGNUP ERROR: $e\n$st');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign-up failed: ${e.toString()}')),
+        SnackBar(
+          content: Text('Sign-up failed: ${e.toString()}'),
+          duration: const Duration(seconds: 6),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -174,38 +223,38 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
                 ),
                 const SizedBox(height: 32),
 
-                // ── Role Selector ──────────────────────────────────────────
-                Text(
-                  'I want to join as',
-                  style: AppTypography.bodySm.copyWith(
-                    color: tc.text70,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RoleChip(
-                        label: 'Member',
-                        icon: Icons.person_rounded,
-                        isSelected: _selectedRole == _UserRole.member,
-                        onTap: () => _selectRole(_UserRole.member),
-                        tc: tc,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _RoleChip(
-                        label: 'Community Leader',
-                        icon: Icons.group_rounded,
-                        isSelected: _selectedRole == _UserRole.leader,
-                        onTap: () => _selectRole(_UserRole.leader),
-                        tc: tc,
-                      ),
-                    ),
-                  ],
-                ),
+                // // ── Role Selector ──────────────────────────────────────────
+                // Text(
+                //   'I want to join as',
+                //   style: AppTypography.bodySm.copyWith(
+                //     color: tc.text70,
+                //     fontWeight: FontWeight.w600,
+                //   ),
+                // ),
+                // const SizedBox(height: 12),
+                // Row(
+                //   children: [
+                //     Expanded(
+                //       child: _RoleChip(
+                //         label: 'Member',
+                //         icon: Icons.person_rounded,
+                //         isSelected: _selectedRole == _UserRole.member,
+                //         onTap: () => _selectRole(_UserRole.member),
+                //         tc: tc,
+                //       ),
+                //     ),
+                //     const SizedBox(width: 12),
+                //     Expanded(
+                //       child: _RoleChip(
+                //         label: 'Community Leader',
+                //         icon: Icons.group_rounded,
+                //         isSelected: _selectedRole == _UserRole.leader,
+                //         onTap: () => _selectRole(_UserRole.leader),
+                //         tc: tc,
+                //       ),
+                //     ),
+                //   ],
+                // ),
 
                 // ── Leader Info Card (animated) ────────────────────────────
                 SizeTransition(
@@ -252,27 +301,36 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
                 const SizedBox(height: 20),
 
                 // ── Birthday ──────────────────────────────────────────────
-                GestureDetector(
+                TextFormField(
+                  controller: _birthdayController,
+                  readOnly: true,
                   onTap: _pickBirthday,
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      readOnly: true,
-                      style: AppTypography.bodyMd.copyWith(color: tc.text100),
-                      decoration: _fieldDecoration(
-                        label: _birthday == null
-                            ? 'Birthday'
-                            : '${_birthday!.day}/${_birthday!.month}/${_birthday!.year}',
-                        icon: Icons.cake_outlined,
-                        tc: tc,
-                      ),
-                      validator: (_) {
-                        if (_birthday == null) {
-                          return 'Please select your birthday';
-                        }
-                        return null;
-                      },
-                    ),
+                  style: AppTypography.bodyMd.copyWith(color: tc.text100),
+                  decoration: _fieldDecoration(
+                    label: 'Birthday (YYYY-MM-DD)',
+                    icon: Icons.cake_outlined,
+                    tc: tc,
+                  ).copyWith(
+                    hintText: 'Tap to select birthday',
+                    hintStyle: AppTypography.bodySm.copyWith(color: tc.text40),
+                    suffixIcon: _birthday != null
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: tc.intelligenceAccent,
+                            size: 20,
+                          )
+                        : Icon(
+                            Icons.calendar_today_outlined,
+                            color: tc.text70,
+                            size: 20,
+                          ),
                   ),
+                  validator: (_) {
+                    if (_birthday == null) {
+                      return 'Please select your birthday';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
 

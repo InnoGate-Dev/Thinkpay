@@ -1,6 +1,8 @@
 import 'package:Thinkpay/core/repository/userRepo.dart';
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -31,7 +33,83 @@ class _LoginState extends State<Login> {
         password: _passwordController.text,
       );
       // Login succeeded if we received a non-empty token.
+      // Token is already persisted inside UserRepository.login via TokenStorage.
+      debugPrint('LOGIN: token="${response.token}" user=${response.user?.name}');
       if (!mounted) return;
+      if (response.token.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign-in failed: empty token received.'),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+    } catch (e, st) {
+      debugPrint('LOGIN ERROR: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign-in failed: ${e.toString()}'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Signs the user in with Google.
+  ///
+  /// Flow:
+  ///   1. Trigger the Google account chooser via [GoogleSignIn.signIn].
+  ///   2. Exchange the Google credentials with Firebase to obtain a Firebase
+  ///      [User], whose [uid] is the stable `google_provider_id` we send to
+  ///      the backend. This ensures the same backend user is matched even when
+  ///      the account also has an email/password auth provider linked to it.
+  ///   3. Call [UserRepository.googleSignIn] with the Firebase UID, email and
+  ///      display name so the backend can create-or-link the account.
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      // Step 1 – Google account chooser.
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled the picker — nothing to do.
+        return;
+      }
+
+      // Step 2 – Exchange for a Firebase credential and sign into Firebase.
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+
+      final UserCredential firebaseCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+
+      final User? firebaseUser = firebaseCredential.user;
+      if (firebaseUser == null) {
+        throw Exception('Firebase sign-in returned no user.');
+      }
+      final String googleProviderId = firebaseUser.uid;
+      final String email = firebaseUser.email ?? googleUser.email;
+      final String name =
+          firebaseUser.displayName ?? googleUser.displayName ?? '';
+
+      if (!mounted) return;
+      final response = await UserRepository().googleSignIn(
+        googleProviderId: googleProviderId,
+        email: email,
+        name: name,
+      );
+
+      if (!mounted) return;
+
       if (response.token.isNotEmpty) {
         Navigator.pushReplacementNamed(context, '/home');
       } else {
@@ -244,8 +322,8 @@ class _LoginState extends State<Login> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tc.intelligenceAccent,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          tc.intelligenceAccent.withOpacity(0.6),
+                      disabledBackgroundColor: tc.intelligenceAccent
+                          .withOpacity(0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -294,13 +372,7 @@ class _LoginState extends State<Login> {
                   icon: Icons.g_mobiledata_rounded,
                   isPrimary: false,
                   // TODO: implement Google sign-in once google_sign_in is configured
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google sign-in coming soon.'),
-                      ),
-                    );
-                  },
+                  onPressed: () async => await _handleGoogleLogin(),
                   tc: tc,
                 ),
                 const SizedBox(height: 48),
