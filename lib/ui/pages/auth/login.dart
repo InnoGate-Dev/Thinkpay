@@ -1,3 +1,4 @@
+import 'package:Thinkpay/core/repository/userRepo.dart';
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 
@@ -12,6 +13,7 @@ class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -20,11 +22,30 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  void _handleEmailLogin() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual email/password authentication
-      // For now, navigate to home
-      Navigator.pushReplacementNamed(context, '/home');
+  Future<void> _handleEmailLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      final response = await UserRepository().login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      // Login succeeded if we received a non-empty token.
+      if (!mounted) return;
+      if (response.token.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign-in failed. Please try again.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign-in failed: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -36,7 +57,11 @@ class _LoginState extends State<Login> {
       backgroundColor: tc.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc.text100, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: tc.text100,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         backgroundColor: Colors.transparent,
@@ -55,12 +80,15 @@ class _LoginState extends State<Login> {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: BoxDecoration(
-                    color: tc.intelligenceAccentDim,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
                   child: Center(
-                    child: Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 28),
+                    child: Text(
+                      'D1',
+                      style: AppTypography.headlineLg.copyWith(
+                        color: tc.text100,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.0,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -87,14 +115,21 @@ class _LoginState extends State<Login> {
                   decoration: InputDecoration(
                     labelText: 'Email address',
                     labelStyle: AppTypography.bodySm.copyWith(color: tc.text70),
-                    prefixIcon: Icon(Icons.email_outlined, color: tc.text70, size: 22),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: tc.text70,
+                      size: 22,
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(color: tc.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: tc.intelligenceAccent, width: 2),
+                      borderSide: BorderSide(
+                        color: tc.intelligenceAccent,
+                        width: 2,
+                      ),
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -102,15 +137,23 @@ class _LoginState extends State<Login> {
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.red.shade400,
+                        width: 2,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Enter a valid email address';
                     }
                     return null;
@@ -125,14 +168,21 @@ class _LoginState extends State<Login> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     labelStyle: AppTypography.bodySm.copyWith(color: tc.text70),
-                    prefixIcon: Icon(Icons.lock_outline_rounded, color: tc.text70, size: 22),
+                    prefixIcon: Icon(
+                      Icons.lock_outline_rounded,
+                      color: tc.text70,
+                      size: 22,
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(color: tc.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: tc.intelligenceAccent, width: 2),
+                      borderSide: BorderSide(
+                        color: tc.intelligenceAccent,
+                        width: 2,
+                      ),
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -140,9 +190,15 @@ class _LoginState extends State<Login> {
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.red.shade400,
+                        width: 2,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -184,23 +240,34 @@ class _LoginState extends State<Login> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _handleEmailLogin,
+                    onPressed: _isLoading ? null : _handleEmailLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tc.intelligenceAccent,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          tc.intelligenceAccent.withOpacity(0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 0,
                     ),
-                    child: Text(
-                      'Sign In',
-                      style: AppTypography.bodyMd.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Sign In',
+                            style: AppTypography.bodyMd.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -225,8 +292,15 @@ class _LoginState extends State<Login> {
                 _GoogleAuthButton(
                   label: 'Continue with Google',
                   icon: Icons.g_mobiledata_rounded,
-                  isPrimary: false, // Secondary style to match original
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+                  isPrimary: false,
+                  // TODO: implement Google sign-in once google_sign_in is configured
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Google sign-in coming soon.'),
+                      ),
+                    );
+                  },
                   tc: tc,
                 ),
                 const SizedBox(height: 48),

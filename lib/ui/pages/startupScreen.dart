@@ -88,7 +88,7 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
                   const Spacer(flex: 2),
                   _PrimaryButton(
                     label: 'Get Started',
-                    onPressed: () => Navigator.of(context).pushNamed('/onboarding'),
+                    onPressed: () => Navigator.of(context).pushNamed('/signup'),
                     tc: tc,
                   ),
                   const SizedBox(height: 16),
