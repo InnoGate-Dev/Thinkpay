@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:Thinkpay/core/errors/exceptions.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -34,7 +35,9 @@ class _LoginState extends State<Login> {
       );
       // Login succeeded if we received a non-empty token.
       // Token is already persisted inside UserRepository.login via TokenStorage.
-      debugPrint('LOGIN: token="${response.token}" user=${response.user?.name}');
+      debugPrint(
+        'LOGIN: token="${response.token}" user=${response.user?.name}',
+      );
       if (!mounted) return;
       if (response.token.isNotEmpty) {
         Navigator.pushReplacementNamed(context, '/home');
@@ -46,6 +49,15 @@ class _LoginState extends State<Login> {
           ),
         );
       }
+    } on ApiException catch (e) {
+      debugPrint('LOGIN API ERROR: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          duration: const Duration(seconds: 6),
+        ),
+      );
     } catch (e, st) {
       debugPrint('LOGIN ERROR: $e\n$st');
       if (!mounted) return;
@@ -117,6 +129,11 @@ class _LoginState extends State<Login> {
           const SnackBar(content: Text('Sign-in failed. Please try again.')),
         );
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +172,7 @@ class _LoginState extends State<Login> {
               children: [
                 const SizedBox(height: 40),
                 // Brand icon (unchanged)
-                Container(
+                SizedBox(
                   width: 56,
                   height: 56,
                   child: Center(
@@ -295,7 +312,7 @@ class _LoginState extends State<Login> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Navigate to forgot password screen
+                      Navigator.pushNamed(context, '/forgetpass');
                     },
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -323,7 +340,7 @@ class _LoginState extends State<Login> {
                       backgroundColor: tc.intelligenceAccent,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: tc.intelligenceAccent
-                          .withOpacity(0.6),
+                          .withValues(alpha: 0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
