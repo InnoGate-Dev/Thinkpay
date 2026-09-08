@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/errors/exceptions.dart';
+import 'package:Thinkpay/core/repository/categoryRepo.dart';
 import 'package:Thinkpay/model/budget_model.dart';
+import 'package:Thinkpay/model/categoryModel.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
-class AddBudgetSheet extends StatefulWidget {
-  const AddBudgetSheet({
+import '../../core/constant/app_colors.dart';
+
+class AddBudgetCategorySheet extends StatefulWidget {
+  const AddBudgetCategorySheet({
     super.key,
     this.existing,
     this.initialType,
@@ -18,13 +22,15 @@ class AddBudgetSheet extends StatefulWidget {
   final TransactionType? initialType;
 
   @override
-  State<AddBudgetSheet> createState() => _AddBudgetSheetState();
+  State<AddBudgetCategorySheet> createState() => _AddBudgetCategorySheetState();
 }
 
-class _AddBudgetSheetState extends State<AddBudgetSheet> {
-  final _nameCtrl   = TextEditingController();
+class _AddBudgetCategorySheetState extends State<AddBudgetCategorySheet> {
+  final _nameCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
+  final _categoryRepo = CategoryRepository();
   late TransactionType _type;
+  bool _isSubmitting = false;
 
   bool get _isEditing => widget.existing != null;
 
@@ -32,10 +38,11 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      _nameCtrl.text   = widget.existing!.name;
+      _nameCtrl.text = widget.existing!.name;
       _amountCtrl.text = widget.existing!.expectedAmount.toStringAsFixed(0);
-      _type            = widget.existing!.type;
+      _type = widget.existing!.type;
     } else {
+      // Default: expense. If Transfer tab opened the sheet, use transferOut.
       _type = widget.initialType ?? TransactionType.expense;
     }
   }
@@ -47,39 +54,74 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     super.dispose();
   }
 
-  void _submit() {
-    final name   = _nameCtrl.text.trim();
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+
+    final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
 
     if (name.isEmpty || amount == null || amount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please fill all fields.'),
+          content: const Text('Please enter a valid category name and expected amount.'),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
       return;
     }
 
-    final provider = FinanceProvider();
+    setState(() => _isSubmitting = true);
 
-    if (_isEditing) {
-      provider.updateBudget(widget.existing!.copyWith(
-        name:           name,
-        expectedAmount: amount,
-        type:           _type,
-      ));
-    } else {
-      provider.addBudget(BudgetCategory(
-        id:             provider.newId(),
-        name:           name,
-        expectedAmount: amount,
-        type:           _type,
-      ));
+    try {
+      final categoryType = CategoryType.fromTransactionType(_type);
+      final provider = FinanceProvider();
+
+      if (_isEditing) {
+        final updated = await _categoryRepo.updateCategory(
+          widget.existing!.id,
+          name: name,
+          type: categoryType,
+          expectedAmount: amount,
+        );
+        provider.updateBudget(updated.toBudgetCategory());
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category updated successfully')),
+        );
+      } else {
+        final created = await _categoryRepo.createCategory(
+          name: name,
+          type: categoryType,
+          expectedAmount: amount,
+        );
+        provider.addBudget(created.toBudgetCategory());
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category created successfully')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save category: ${e.toString()}'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
-
-    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -125,25 +167,78 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           ],
           const SizedBox(height: 20),
 
-          // ── Type toggle ──────────────────────────────────────────────────
+          // ── Type toggle ───────────────────────────────────────────
           Container(
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
                 color: tc.surface2,
                 borderRadius: BorderRadius.circular(14)),
-            child: Row(children: [
-              _TypeBtn(
-                label: 'Expense',
-                selected: _type == TransactionType.expense,
-                color: tc.red,
-                onTap: () => setState(() => _type = TransactionType.expense),
-              ),
-              _TypeBtn(
-                label: 'Income',
-                selected: _type == TransactionType.income,
-                color: tc.lime,
-                onTap: () => setState(() => _type = TransactionType.income),
-              ),
-            ]),
+            child: Column(
+              children: [
+                // ── Main row: Expense | Income | Transfer ────────────────
+                Row(children: [
+                  _TypeBtn(
+                    label: 'Expense',
+                    selected: _type == TransactionType.expense,
+                    color: tc.red,
+                    onTap: () => setState(() => _type = TransactionType.expense),
+                  ),
+                  _TypeBtn(
+                    label: 'Income',
+                    selected: _type == TransactionType.income,
+                    color: tc.lime,
+                    onTap: () => setState(() => _type = TransactionType.income),
+                  ),
+                  _TypeBtn(
+                    label: 'Transfer',
+                    selected: _type == TransactionType.transferIn ||
+                        _type == TransactionType.transferOut,
+                    color: tc.intelligenceAccent,
+                    onTap: () => setState(
+                      // Default to transferOut when tapping Transfer
+                      () => _type = TransactionType.transferOut,
+                    ),
+                  ),
+                ]),
+
+                // ── Sub-toggle: Transfer In | Transfer Out (only when Transfer selected)
+                if (_type == TransactionType.transferIn ||
+                    _type == TransactionType.transferOut) ...
+                [
+                  const SizedBox(height: 4),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: tc.intelligenceAccent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: tc.intelligenceAccent.withValues(alpha: 0.2),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(children: [
+                      _TypeBtn(
+                        label: '\u2193 Transfer In',
+                        selected: _type == TransactionType.transferIn,
+                        color: tc.intelligenceAccent,
+                        onTap: () => setState(
+                          () => _type = TransactionType.transferIn,
+                        ),
+                      ),
+                      _TypeBtn(
+                        label: '\u2191 Transfer Out',
+                        selected: _type == TransactionType.transferOut,
+                        color: tc.intelligenceAccent,
+                        onTap: () => setState(
+                          () => _type = TransactionType.transferOut,
+                        ),
+                      ),
+                    ]),
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -170,18 +265,31 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: _submit,
+              onPressed: _isSubmitting ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _type == TransactionType.expense ? tc.red : tc.lime,
+                backgroundColor: _type == TransactionType.expense
+                    ? tc.red
+                    : (_type == TransactionType.income)
+                        ? tc.lime
+                        : tc.intelligenceAccent, // transferIn / transferOut
                 foregroundColor: tc.background,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
-              child: Text(
-                _isEditing ? 'Save Changes' : 'Create Budget',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
+              child: _isSubmitting
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation(tc.background),
+                      ),
+                    )
+                  : Text(
+                      _isEditing ? 'Save Changes' : 'Create Category',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
             ),
           ),
         ],
