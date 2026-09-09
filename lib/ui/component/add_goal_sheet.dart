@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import '../../core/constant/app_colors.dart';
+import '../../core/repository/goalRepo.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
@@ -7,20 +8,24 @@ import 'package:Thinkpay/providers/finance_provider.dart';
 // Add / Edit Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 class AddGoalSheet extends StatefulWidget {
-  const AddGoalSheet({super.key, this.existing});
+  const AddGoalSheet({super.key, this.existing, this.initialType});
 
   /// When provided, the sheet opens in edit mode prefilled with this goal.
   final GoalModel? existing;
+
+  /// Default type derived from the active tab.
+  final GoalType? initialType;
 
   @override
   State<AddGoalSheet> createState() => _AddGoalSheetState();
 }
 
 class _AddGoalSheetState extends State<AddGoalSheet> {
-  final _nameCtrl   = TextEditingController();
-  final _amountCtrl = TextEditingController();
+  final _nameCtrl         = TextEditingController();
+  final _targetAmountCtrl = TextEditingController();
+  final _actualAmountCtrl = TextEditingController();
   late GoalType _type;
-  DateTime? _targetDate;
+  bool _submitting = false;
 
   bool get _isEditing => widget.existing != null;
 
@@ -28,52 +33,30 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      _nameCtrl.text   = widget.existing!.name;
-      _amountCtrl.text = widget.existing!.targetAmount.toStringAsFixed(0);
-      _type            = widget.existing!.type;
-      _targetDate      = widget.existing!.targetDate;
+      _nameCtrl.text         = widget.existing!.name;
+      _targetAmountCtrl.text = widget.existing!.targetAmount.toStringAsFixed(2);
+      _actualAmountCtrl.text = widget.existing!.savedAmount.toStringAsFixed(2);
+      _type                  = widget.existing!.type;
     } else {
-      _type = GoalType.savings;
+      _type                  = widget.initialType ?? GoalType.savings;
+      _actualAmountCtrl.text = '0.00';
     }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _amountCtrl.dispose();
+    _targetAmountCtrl.dispose();
+    _actualAmountCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _targetDate ?? now.add(const Duration(days: 90)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 10)),
-      builder: (ctx, child) {
-        final tc = ThemeColors.of(ctx);
-        return Theme(
-          data: Theme.of(ctx).copyWith(
-            colorScheme: Theme.of(ctx).colorScheme.copyWith(
-              primary: tc.lime,
-              onPrimary: tc.background,
-              surface: tc.surface,
-              onSurface: tc.text100,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) setState(() => _targetDate = picked);
-  }
+  Future<void> _submit() async {
+    final name         = _nameCtrl.text.trim();
+    final targetAmount = double.tryParse(_targetAmountCtrl.text.replaceAll(',', ''));
+    final actualAmount = double.tryParse(_actualAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
 
-  void _submit() {
-    final name   = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
-
-    if (name.isEmpty || amount == null || amount <= 0) {
+    if (name.isEmpty || targetAmount == null || targetAmount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -84,30 +67,64 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
       return;
     }
 
-    final provider = FinanceProvider();
-
-    if (_isEditing) {
-      provider.updateGoal(widget.existing!.copyWith(
-        name:           name,
-        type:           _type,
-        targetAmount:   amount,
-        targetDate:     _targetDate,
-        clearTargetDate: _targetDate == null,
-      ));
-    } else {
-      provider.addGoal(GoalModel(
-        id:           provider.newId(),
-        name:         name,
-        type:         _type,
-        targetAmount: amount,
-        createdAt:    DateTime.now(),
-        targetDate:   _targetDate,
-      ));
+    if (actualAmount < 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Actual amount cannot be negative.'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+      return;
     }
 
-    if (mounted) Navigator.pop(context);
-  }
+    final isComplete = actualAmount >= targetAmount && targetAmount > 0;
 
+    setState(() => _submitting = true);
+    try {
+      final repo     = GoalRepository();
+      final provider = FinanceProvider();
+
+      if (_isEditing) {
+        // ── Edit existing goal ────────────────────────────────────────────
+        final updated = await repo.updateGoal(
+          widget.existing!.id,
+          widget.existing!,
+          name: name,
+          targetAmount: targetAmount,
+          actualAmount: actualAmount,
+          type: _type,
+        );
+        provider.updateGoal(updated, preserveSaved: false);
+      } else {
+        // ── Create new goal ───────────────────────────────────────────────
+        final created = await repo.createGoal(
+          name: name,
+          targetAmount: targetAmount,
+          actualAmount: actualAmount,
+          isComplete: isComplete,
+          type: _type,
+        );
+        provider.addGoal(created);
+      }
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Failed to update goal: $e'
+                : 'Failed to create goal: $e',
+          ),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -185,66 +202,53 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                 tc: tc),
             const SizedBox(height: 14),
 
-            _Label('Target Amount (Rs.)', tc),
+            _Label('Actual Amount (Rs.)', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _amountCtrl,
-                hint: '0.00',
-                icon: Icons.currency_rupee_rounded,
-                keyboardType: TextInputType.number,
+                controller: _actualAmountCtrl,
+                hint: '500.00',
+                icon: Icons.account_balance_wallet_rounded,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 tc: tc),
             const SizedBox(height: 14),
 
-            _Label('Target Date (Optional)', tc),
+            _Label('Target Amount (Rs.)', tc),
             const SizedBox(height: 6),
-            GestureDetector(
-              onTap: _pickDate,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: tc.surface2,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: tc.border),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(children: [
-                  Icon(Icons.calendar_today_rounded, color: tc.text40, size: 18),
-                  const SizedBox(width: 12),
-                  Text(
-                    _targetDate == null
-                        ? 'Pick a date'
-                        : '${_targetDate!.day}/${_targetDate!.month}/${_targetDate!.year}',
-                    style: TextStyle(
-                        color: _targetDate == null ? tc.text40 : tc.text100,
-                        fontSize: 14),
-                  ),
-                  const Spacer(),
-                  if (_targetDate != null)
-                    GestureDetector(
-                      onTap: () => setState(() => _targetDate = null),
-                      child: Icon(Icons.close_rounded, color: tc.text40, size: 18),
-                    ),
-                ]),
-              ),
-            ),
+            _Field(
+                controller: _targetAmountCtrl,
+                hint: '6000.00',
+                icon: Icons.currency_rupee_rounded,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                tc: tc),
             const SizedBox(height: 24),
 
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accent,
                   foregroundColor: tc.background,
+                  disabledBackgroundColor: accent.withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: Text(
-                  _isEditing ? 'Save Changes' : 'Create Goal',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
+                child: _submitting
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: tc.background,
+                        ),
+                      )
+                    : Text(
+                        _isEditing ? 'Save Changes' : 'Create Goal',
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
               ),
             ),
           ],
@@ -258,9 +262,14 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 // Add Amount to Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 class AddAmountToGoalSheet extends StatefulWidget {
-  const AddAmountToGoalSheet({super.key, required this.goalId, required this.goalName});
-  final String goalId;
-  final String goalName;
+  const AddAmountToGoalSheet({
+    super.key,
+    required this.goal,
+  });
+
+  /// The goal to contribute to. The full model is needed so the repo can
+  /// issue a proper update call.
+  final GoalModel goal;
 
   @override
   State<AddAmountToGoalSheet> createState() => _AddAmountToGoalSheetState();
@@ -268,6 +277,7 @@ class AddAmountToGoalSheet extends StatefulWidget {
 
 class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
   final _amountCtrl = TextEditingController();
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -275,7 +285,7 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) {
       if (!mounted) return;
@@ -288,18 +298,41 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
       return;
     }
 
-    final completed = FinanceProvider().addAmountToGoal(widget.goalId, amount);
+    setState(() => _submitting = true);
+    try {
+      final repo     = GoalRepository();
+      final provider = FinanceProvider();
 
-    if (!mounted) return;
-    Navigator.pop(context);
+      final updated = await repo.addAmountToGoal(
+        widget.goal.id,
+        amount,
+        widget.goal,
+      );
 
-    if (completed) {
+      // Sync provider with the backend response
+      provider.addAmountToGoal(widget.goal.id, updated.savedAmount);
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (updated.isCompleted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 Goal "${widget.goal.name}" completed!'),
+            backgroundColor: ThemeColors.of(context).lime,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('🎉 Goal "${widget.goalName}" completed!'),
-          backgroundColor: ThemeColors.of(context).lime,
+          content: Text('Failed to add amount: $e'),
+          backgroundColor: ThemeColors.of(context).red,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -327,7 +360,7 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Add to "${widget.goalName}"',
+            'Add to "${widget.goal.name}"',
             style: TextStyle(
                 color: tc.text100, fontSize: 20, fontWeight: FontWeight.w700),
           ),
@@ -352,16 +385,27 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: _submit,
+              onPressed: _submitting ? null : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: tc.lime,
                 foregroundColor: tc.background,
+                disabledBackgroundColor: tc.lime.withValues(alpha: 0.5),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Add Amount',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              child: _submitting
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: tc.background,
+                      ),
+                    )
+                  : const Text('Add Amount',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
