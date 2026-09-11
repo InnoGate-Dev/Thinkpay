@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -46,8 +46,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (index) => setState(() => _currentStep = index),
                 children: [
-                  _WelcomeStep(onNext: _nextPage, tc: tc),
-                  _FocusAreasStep(onNext: _nextPage, tc: tc),
+                  _WelcomeStep(onNext: _nextPage, tc: tc)
                 ],
               ),
             ),
@@ -158,88 +157,6 @@ class _WelcomeStep extends StatelessWidget {
           ),
           const Spacer(flex: 2),
           _PrimaryButton(label: 'Get Started', onPressed: onNext, tc: tc),
-        ],
-      ),
-    );
-  }
-}
-
-class _FocusAreasStep extends StatefulWidget {
-  final VoidCallback onNext;
-  final ThemeColors tc;
-
-  const _FocusAreasStep({required this.onNext, required this.tc});
-
-  @override
-  State<_FocusAreasStep> createState() => _FocusAreasStepState();
-}
-
-class _FocusAreasStepState extends State<_FocusAreasStep> {
-  final Set<String> _selectedAreas = {};
-  final List<String> _areas = [
-    'Personal Finance',
-    'Investing',
-    'Business',
-    'Personal Growth',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'What\'s your focus?',
-            style: AppTypography.headlineLg.copyWith(color: widget.tc.text100),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Select the areas you want to master first.',
-            style: AppTypography.bodyMd.copyWith(color: widget.tc.text70),
-          ),
-          const SizedBox(height: 40),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: _areas.map((area) {
-              final isSelected = _selectedAreas.contains(area);
-              return FilterChip(
-                label: Text(area),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedAreas.add(area);
-                    } else {
-                      _selectedAreas.remove(area);
-                    }
-                  });
-                },
-                selectedColor: widget.tc.intelligenceAccentDim,
-                checkmarkColor: widget.tc.intelligenceAccent,
-                labelStyle: AppTypography.bodySm.copyWith(
-                  color: isSelected ? widget.tc.intelligenceAccent : widget.tc.text70,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
-                backgroundColor: widget.tc.surface2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  side: BorderSide(
-                    color: isSelected ? widget.tc.intelligenceAccent : widget.tc.border,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              );
-            }).toList(),
-          ),
-          const Spacer(),
-          _PrimaryButton(
-            label: 'Continue',
-            onPressed: _selectedAreas.isNotEmpty ? widget.onNext : null,
-            tc: widget.tc,
-          ),
         ],
       ),
     );
