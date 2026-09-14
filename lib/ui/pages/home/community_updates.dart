@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 
 // ── Community Updates Section ─────────────────────────────────────────────────
 class CommunityUpdatesSection extends StatelessWidget {
@@ -129,6 +129,10 @@ class CommunityUpdatesSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
+        // Quick channel row
+        _ActiveChannelsRow(tc: tc),
+        const SizedBox(height: 14),
+
         // Horizontal scrollable post cards
         SizedBox(
           height: 178,
@@ -136,15 +140,13 @@ class CommunityUpdatesSection extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             itemCount: _posts.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) =>
                 _CommunityPostCard(post: _posts[index], tc: tc),
           ),
         ),
-        const SizedBox(height: 14),
 
-        // Quick channel row
-        _ActiveChannelsRow(tc: tc),
+
       ],
     );
   }
