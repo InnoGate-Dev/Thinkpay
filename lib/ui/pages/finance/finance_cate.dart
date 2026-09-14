@@ -1,3 +1,6 @@
+import 'package:Thinkpay/core/repository/categoryRepo.dart';
+import 'package:Thinkpay/core/repository/trasectionRepo.dart';
+import 'package:Thinkpay/model/categoryModel.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,8 +8,7 @@ import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
-import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
-import 'package:Thinkpay/ui/component/navbar.dart';
+import 'package:Thinkpay/ui/component/add_budget_category_sheet.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 
 /// Published whenever the Finance page's Expense/Income tab changes.
@@ -22,16 +24,20 @@ class FinancePage extends StatefulWidget {
 class _FinancePageState extends State<FinancePage>
     with SingleTickerProviderStateMixin {
   final _provider = FinanceProvider();
+  final _categoryRepo = CategoryRepository();
+  final _transactionRepo = TransactionRepository();
   late TabController _tab;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
     _tab.addListener(() {
       setState(() {});
       financeTabIndexNotifier.value = _tab.index;
     });
+    _loadFinanceData();
   }
 
   @override
@@ -40,16 +46,64 @@ class _FinancePageState extends State<FinancePage>
     super.dispose();
   }
 
+  /// Fetches the user's financial categories and transactions from the backend API
+  /// and populates the [FinanceProvider] so the charts and lists reflect live DB data.
+  Future<void> _loadFinanceData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _categoryRepo.getCategories(),
+        _transactionRepo.getTransactionsAsLocalModels(),
+      ]);
+      final categories = results[0] as List<Category>;
+      final transactions = results[1] as List<TransactionModel>;
+
+      _provider.setBudgetCategories(
+        categories.map((c) => c.toBudgetCategory()).toList(),
+      );
+      _provider.setTransactions(transactions);
+    } catch (e) {
+      debugPrint('Failed to load financial data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _openAddBudget() {
     final type = _tab.index == 0
         ? TransactionType.expense
-        : TransactionType.income;
+        : _tab.index == 1
+            ? TransactionType.income
+            : TransactionType.transfer;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddBudgetSheet(initialType: type),
+      builder: (_) => AddBudgetCategorySheet(initialType: type),
     );
+  }
+
+  /// Calls the real DELETE /categories/{id} API and removes the item from the
+  /// local [FinanceProvider], giving user feedback via SnackBar.
+  Future<void> _deleteCategory(int id) async {
+    try {
+      await _categoryRepo.deleteCategory(id);
+      _provider.deleteBudget(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete category: ${e.toString()}'),
+            backgroundColor: ThemeColors.of(context).red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -65,8 +119,12 @@ class _FinancePageState extends State<FinancePage>
         final incBudgets = _provider.budgets
             .where((b) => b.type == TransactionType.income)
             .toList();
+        final trfBudgets = _provider.budgets
+            .where((b) => b.type == TransactionType.transfer)
+            .toList();
         final expActual = _provider.expenseByCategory;
         final incActual = _provider.incomeByCategory;
+        final trfActual = _provider.transferByCategory;
 
         // ── Pie sections — Expenses ──────────────────────────────────────────
         final expCats = expActual.entries.toList();
@@ -86,6 +144,18 @@ class _FinancePageState extends State<FinancePage>
           for (int i = 0; i < incCats.length; i++)
             PieChartSectionData(
               value: incCats[i].value,
+              color: AppColors.chart[i % AppColors.chart.length],
+              title: '',
+              radius: 44,
+            ),
+        ];
+
+        // ── Pie sections — Transfers ─────────────────────────────────────────
+        final trfCats = trfActual.entries.toList();
+        final trfPieSections = <PieChartSectionData>[
+          for (int i = 0; i < trfCats.length; i++)
+            PieChartSectionData(
+              value: trfCats[i].value,
               color: AppColors.chart[i % AppColors.chart.length],
               title: '',
               radius: 44,
@@ -131,11 +201,21 @@ class _FinancePageState extends State<FinancePage>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _SegmentedControl(
                     controller: _tab,
-                    tabs: const ['Expenses', 'Income'],
+                    tabs: const ['Expenses', 'Income', 'Transfers'],
                     tc: tc,
                   ),
                 ),
-                const SizedBox(height: 16),
+                if (_isLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 6),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation(tc.coreAction),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 16),
 
                 // ── Tab content ──────────────────────────────────────────────
                 Expanded(
@@ -150,6 +230,8 @@ class _FinancePageState extends State<FinancePage>
                         accentColor: tc.accentExpense,
                         chartTitle: 'Expense Breakdown',
                         type: TransactionType.expense,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
                         tc: tc,
                       ),
                       _FinanceTab(
@@ -160,6 +242,20 @@ class _FinancePageState extends State<FinancePage>
                         accentColor: tc.coreAction,
                         chartTitle: 'Income Breakdown',
                         type: TransactionType.income,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
+                        tc: tc,
+                      ),
+                      _FinanceTab(
+                        budgets: trfBudgets,
+                        actualMap: trfActual,
+                        pieSections: trfPieSections,
+                        catLabels: trfCats.map((e) => e.key).toList(),
+                        accentColor: tc.intelligenceAccent,
+                        chartTitle: 'Transfer Breakdown',
+                        type: TransactionType.transfer,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
                         tc: tc,
                       ),
                     ],
@@ -236,6 +332,8 @@ class _FinanceTab extends StatelessWidget {
     required this.accentColor,
     required this.chartTitle,
     required this.type,
+    required this.onDelete,
+    required this.onRefresh,
     required this.tc,
   });
 
@@ -246,23 +344,36 @@ class _FinanceTab extends StatelessWidget {
   final Color accentColor;
   final String chartTitle;
   final TransactionType type;
+
+  /// Called when the user confirms deletion of a category.
+  /// Receives the category [id] and returns a [Future] so errors propagate.
+  final Future<void> Function(int id) onDelete;
+
+  /// Pull-to-refresh callback to reload categories from the backend.
+  final Future<void> Function() onRefresh;
+
   final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-      children: [
-        // ── Totals summary ─────────────────────────────────────────────────
-        _SummaryRow(
-          budgets: budgets,
-          actualMap: actualMap,
-          accent: accentColor,
-          type: type,
-          tc: tc,
-        ),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: accentColor,
+      backgroundColor: tc.surface,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+        children: [
+          // ── Totals summary ─────────────────────────────────────────────────
+          _SummaryRow(
+            budgets: budgets,
+            actualMap: actualMap,
+            accent: accentColor,
+            type: type,
+            tc: tc,
+          ),
         const SizedBox(height: 16),
 
         // ── Donut chart ────────────────────────────────────────────────────
@@ -428,14 +539,18 @@ class _FinanceTab extends StatelessWidget {
         ...budgets.map(
           (b) => _FinanceCard(
             b: b,
-            actual: actualMap[b.name] ?? 0.0,
+            actual: (actualMap[b.name] != null && actualMap[b.name]! > 0)
+                ? actualMap[b.name]!
+                : b.actualAmount,
             accentColor: accentColor,
+            onDelete: onDelete,
             tc: tc,
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── Finance Category Card ──────────────────────────────────────────────────────
@@ -444,12 +559,17 @@ class _FinanceCard extends StatelessWidget {
     required this.b,
     required this.actual,
     required this.accentColor,
+    required this.onDelete,
     required this.tc,
   });
 
   final BudgetCategory b;
   final double actual;
   final Color accentColor;
+
+  /// Callback for when the user confirms deletion of this card's category.
+  final Future<void> Function(int id) onDelete;
+
   final ThemeColors tc;
 
   void _openEdit(BuildContext context) {
@@ -457,7 +577,7 @@ class _FinanceCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddBudgetSheet(existing: b),
+      builder: (_) => AddBudgetCategorySheet(existing: b),
     );
   }
 
@@ -485,8 +605,8 @@ class _FinanceCard extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              FinanceProvider().deleteBudget(b.id);
               Navigator.pop(ctx);
+              onDelete(b.id);
             },
             child: Text(
               'Delete',
@@ -649,7 +769,7 @@ class _FinanceCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Rs. ${_fmt(actual)} spent',
+                  'Rs. ${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : b.type == TransactionType.income ? 'received' : 'transferred'}',
                   style: GoogleFonts.inter(
                     color: bar,
                     fontSize: 12,
@@ -693,7 +813,10 @@ class _SummaryRow extends StatelessWidget {
     );
     final totalActual = budgets.fold<double>(
       0,
-      (s, b) => s + (actualMap[b.name] ?? 0),
+      (s, b) {
+        final val = actualMap[b.name];
+        return s + ((val != null && val > 0) ? val : b.actualAmount);
+      },
     );
 
     return Container(
