@@ -46,6 +46,13 @@ IconData _categoryIcon(String cat) {
       return Icons.business_center_rounded;
     case 'investment':
       return Icons.trending_up_rounded;
+    case 'savings':
+    case 'savings account':
+      return Icons.savings_rounded;
+    case 'brokerage':
+    case 'transfer':
+    case 'bank transfer':
+      return Icons.swap_horiz_rounded;
     case 'gift':
       return Icons.card_giftcard_rounded;
     default:
