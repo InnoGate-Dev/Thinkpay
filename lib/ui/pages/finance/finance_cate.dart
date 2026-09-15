@@ -1,15 +1,16 @@
+import 'package:Thinkpay/core/repository/categoryRepo.dart';
+import 'package:Thinkpay/core/repository/trasectionRepo.dart';
+import 'package:Thinkpay/model/categoryModel.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
-import 'package:Thinkpay/ui/component/add_budget_sheet.dart';
-import 'package:Thinkpay/ui/component/navbar.dart';
-import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
+import 'package:Thinkpay/ui/component/add_budget_category_sheet.dart';
 
-/// Published whenever the Finance page's Expense/Income tab changes.
+/// Published whenever the Finance page's Expense/Income/Transfer tab changes.
 /// AppShell reads this so its FAB can pre-select the correct type.
 final financeTabIndexNotifier = ValueNotifier<int>(0);
 
@@ -22,16 +23,20 @@ class FinancePage extends StatefulWidget {
 class _FinancePageState extends State<FinancePage>
     with SingleTickerProviderStateMixin {
   final _provider = FinanceProvider();
+  final _categoryRepo = CategoryRepository();
+  final _transactionRepo = TransactionRepository();
   late TabController _tab;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this); // Expenses, Income, Transfers
     _tab.addListener(() {
       setState(() {});
       financeTabIndexNotifier.value = _tab.index;
     });
+    _loadFinanceData();
   }
 
   @override
@@ -40,16 +45,68 @@ class _FinancePageState extends State<FinancePage>
     super.dispose();
   }
 
+  /// Fetches the user's financial categories and transactions from the backend API
+  /// and populates the [FinanceProvider] so the charts and lists reflect live DB data.
+  Future<void> _loadFinanceData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _categoryRepo.getCategories(),
+        _transactionRepo.getTransactionsAsLocalModels(),
+      ]);
+      final categories = results[0] as List<Category>;
+      final transactions = results[1] as List<TransactionModel>;
+
+      _provider.setBudgetCategories(
+        categories.map((c) => c.toBudgetCategory()).toList(),
+      );
+      _provider.setTransactions(transactions);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
+      );
+      debugPrint('Failed to load financial data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _openAddBudget() {
     final type = _tab.index == 0
         ? TransactionType.expense
-        : TransactionType.income;
+        : _tab.index == 1
+        ? TransactionType.income
+        : TransactionType.transferOut; // Transfer tab defaults to transferOut
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddBudgetSheet(initialType: type),
-    );
+      builder: (_) => AddBudgetCategorySheet(initialType: type),
+    ).then((_) => _loadFinanceData()); // Refresh after sheet closes
+  }
+
+  /// Calls the real DELETE /categories/{id} API and removes the item from the
+  /// local [FinanceProvider], giving user feedback via SnackBar.
+  Future<void> _deleteCategory(int id) async {
+    try {
+      await _categoryRepo.deleteCategory(id);
+      _provider.deleteBudget(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete category: ${e.toString()}'),
+            backgroundColor: ThemeColors.of(context).red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -65,8 +122,19 @@ class _FinancePageState extends State<FinancePage>
         final incBudgets = _provider.budgets
             .where((b) => b.type == TransactionType.income)
             .toList();
+        final trfBudgets = _provider.budgets
+            .where((b) =>
+                b.type == TransactionType.transferIn ||
+                b.type == TransactionType.transferOut)
+            .toList();
+
         final expActual = _provider.expenseByCategory;
         final incActual = _provider.incomeByCategory;
+        // NOTE: if `transferByCategory` doesn't exist on FinanceProvider yet,
+        // add a getter that mirrors expenseByCategory/incomeByCategory but
+        // filters transactions where type == TransactionType.transferIn or transferOut and
+        // groups/sums by category name.
+        final trfActual = _provider.transferByCategory;
 
         // ── Pie sections — Expenses ──────────────────────────────────────────
         final expCats = expActual.entries.toList();
@@ -92,6 +160,18 @@ class _FinancePageState extends State<FinancePage>
             ),
         ];
 
+        // ── Pie sections — Transfers ─────────────────────────────────────────
+        final trfCats = trfActual.entries.toList();
+        final trfPieSections = <PieChartSectionData>[
+          for (int i = 0; i < trfCats.length; i++)
+            PieChartSectionData(
+              value: trfCats[i].value,
+              color: AppColors.chart[i % AppColors.chart.length],
+              title: '',
+              radius: 44,
+            ),
+        ];
+
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
@@ -105,24 +185,37 @@ class _FinancePageState extends State<FinancePage>
             ),
             child: const Icon(Icons.add_rounded, size: 24),
           ),
-
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
             bottom: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header ───────────────────────────────────────────────────
+                // ── Header with back button ───────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                  child: Text(
-                    'Finance',
-                    style: GoogleFonts.manrope(
-                      color: tc.text100,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(8, 12, 20, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: tc.text100,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Back',
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Manage Budgets',
+                        style: GoogleFonts.manrope(
+                          color: tc.text100,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -131,11 +224,21 @@ class _FinancePageState extends State<FinancePage>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _SegmentedControl(
                     controller: _tab,
-                    tabs: const ['Expenses', 'Income'],
+                    tabs: const ['Expenses', 'Income', 'Transfers'],
                     tc: tc,
                   ),
                 ),
-                const SizedBox(height: 16),
+                if (_isLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 6),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation(tc.coreAction),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 16),
 
                 // ── Tab content ──────────────────────────────────────────────
                 Expanded(
@@ -150,6 +253,8 @@ class _FinancePageState extends State<FinancePage>
                         accentColor: tc.accentExpense,
                         chartTitle: 'Expense Breakdown',
                         type: TransactionType.expense,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
                         tc: tc,
                       ),
                       _FinanceTab(
@@ -160,6 +265,20 @@ class _FinancePageState extends State<FinancePage>
                         accentColor: tc.coreAction,
                         chartTitle: 'Income Breakdown',
                         type: TransactionType.income,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
+                        tc: tc,
+                      ),
+                      _FinanceTab(
+                        budgets: trfBudgets,
+                        actualMap: trfActual,
+                        pieSections: trfPieSections,
+                        catLabels: trfCats.map((e) => e.key).toList(),
+                        accentColor: tc.text70,
+                        chartTitle: 'Transfer Breakdown',
+                        type: TransactionType.transferOut,
+                        onDelete: _deleteCategory,
+                        onRefresh: _loadFinanceData,
                         tc: tc,
                       ),
                     ],
@@ -236,6 +355,8 @@ class _FinanceTab extends StatelessWidget {
     required this.accentColor,
     required this.chartTitle,
     required this.type,
+    required this.onDelete,
+    required this.onRefresh,
     required this.tc,
   });
 
@@ -246,194 +367,211 @@ class _FinanceTab extends StatelessWidget {
   final Color accentColor;
   final String chartTitle;
   final TransactionType type;
+
+  /// Called when the user confirms deletion of a category.
+  /// Receives the category [id] and returns a [Future] so errors propagate.
+  final Future<void> Function(int id) onDelete;
+
+  /// Pull-to-refresh callback to reload categories from the backend.
+  final Future<void> Function() onRefresh;
+
   final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-      children: [
-        // ── Totals summary ─────────────────────────────────────────────────
-        _SummaryRow(
-          budgets: budgets,
-          actualMap: actualMap,
-          accent: accentColor,
-          type: type,
-          tc: tc,
-        ),
-        const SizedBox(height: 16),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: accentColor,
+      backgroundColor: tc.surface,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+        children: [
+          // ── Totals summary ─────────────────────────────────────────────────
+          _SummaryRow(
+            budgets: budgets,
+            actualMap: actualMap,
+            accent: accentColor,
+            type: type,
+            tc: tc,
+          ),
+          const SizedBox(height: 16),
 
-        // ── Donut chart ────────────────────────────────────────────────────
-        if (pieSections.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: tc.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: tc.border, width: 0.8),
-              boxShadow: isDark
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  chartTitle,
-                  style: GoogleFonts.manrope(
-                    color: tc.text100,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+          // ── Donut chart ────────────────────────────────────────────────────
+          if (pieSections.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: tc.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: tc.border, width: 0.8),
+                boxShadow: isDark
+                    ? null
+                    : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 180,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            PieChart(
-                              PieChartData(
-                                sections: pieSections,
-                                sectionsSpace: 2,
-                                centerSpaceRadius: 52,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    chartTitle,
+                    style: GoogleFonts.manrope(
+                      color: tc.text100,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 180,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              PieChart(
+                                PieChartData(
+                                  sections: pieSections,
+                                  sectionsSpace: 2,
+                                  centerSpaceRadius: 52,
+                                ),
                               ),
-                            ),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${pieSections.length}',
-                                  style: GoogleFonts.manrope(
-                                    color: tc.text100,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${pieSections.length}',
+                                    style: GoogleFonts.manrope(
+                                      color: tc.text100,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  'categories',
-                                  style: GoogleFonts.inter(
-                                    color: tc.text40,
-                                    fontSize: 10,
+                                  Text(
+                                    'categories',
+                                    style: GoogleFonts.inter(
+                                      color: tc.text40,
+                                      fontSize: 10,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: List.generate(
-                          catLabels.length,
-                          (i) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: AppColors
-                                        .chart[i % AppColors.chart.length],
-                                    borderRadius: BorderRadius.circular(2),
+                        const SizedBox(width: 16),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: List.generate(
+                            catLabels.length,
+                                (i) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: AppColors
+                                          .chart[i % AppColors.chart.length],
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  catLabels[i],
-                                  style: GoogleFonts.inter(
-                                    color: tc.text70,
-                                    fontSize: 12,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    catLabels[i],
+                                    style: GoogleFonts.inter(
+                                      color: tc.text70,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // ── Category progress bars ─────────────────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Categories',
-              style: GoogleFonts.manrope(
-                color: tc.text100,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              '${budgets.length} total',
-              style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        if (budgets.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(36),
-            decoration: BoxDecoration(
-              color: tc.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: tc.border, width: 0.8),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.pie_chart_outline_rounded,
-                    color: tc.text20,
-                    size: 36,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'No budget categories yet.\nTap + to create one.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: tc.text40,
-                      fontSize: 13,
-                      height: 1.6,
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+          ],
 
-        ...budgets.map(
-          (b) => _FinanceCard(
-            b: b,
-            actual: actualMap[b.name] ?? 0.0,
-            accentColor: accentColor,
-            tc: tc,
+          // ── Category progress bars ─────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Categories',
+                style: GoogleFonts.manrope(
+                  color: tc.text100,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '${budgets.length} total',
+                style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+
+          if (budgets.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(36),
+              decoration: BoxDecoration(
+                color: tc.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: tc.border, width: 0.8),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.pie_chart_outline_rounded,
+                      color: tc.text20,
+                      size: 36,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No budget categories yet.\nTap + to create one.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: tc.text40,
+                        fontSize: 13,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          ...budgets.map(
+                (b) => _FinanceCard(
+              b: b,
+              actual: (actualMap[b.name] != null && actualMap[b.name]! > 0)
+                  ? actualMap[b.name]!
+                  : b.actualAmount,
+              accentColor: accentColor,
+              onDelete: onDelete,
+              tc: tc,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -444,12 +582,17 @@ class _FinanceCard extends StatelessWidget {
     required this.b,
     required this.actual,
     required this.accentColor,
+    required this.onDelete,
     required this.tc,
   });
 
   final BudgetCategory b;
   final double actual;
   final Color accentColor;
+
+  /// Callback for when the user confirms deletion of this card's category.
+  final Future<void> Function(int id) onDelete;
+
   final ThemeColors tc;
 
   void _openEdit(BuildContext context) {
@@ -457,7 +600,7 @@ class _FinanceCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddBudgetSheet(existing: b),
+      builder: (_) => AddBudgetCategorySheet(existing: b),
     );
   }
 
@@ -485,8 +628,8 @@ class _FinanceCard extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              FinanceProvider().deleteBudget(b.id);
               Navigator.pop(ctx);
+              onDelete(b.id);
             },
             child: Text(
               'Delete',
@@ -518,12 +661,12 @@ class _FinanceCard extends StatelessWidget {
         boxShadow: isDark
             ? null
             : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -649,7 +792,7 @@ class _FinanceCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Rs. ${_fmt(actual)} spent',
+                  'Rs. ${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
                   style: GoogleFonts.inter(
                     color: bar,
                     fontSize: 12,
@@ -689,11 +832,14 @@ class _SummaryRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final totalExpected = budgets.fold<double>(
       0,
-      (s, b) => s + b.expectedAmount,
+          (s, b) => s + b.expectedAmount,
     );
     final totalActual = budgets.fold<double>(
       0,
-      (s, b) => s + (actualMap[b.name] ?? 0),
+          (s, b) {
+        final val = actualMap[b.name];
+        return s + ((val != null && val > 0) ? val : b.actualAmount);
+      },
     );
 
     return Container(
@@ -705,12 +851,12 @@ class _SummaryRow extends StatelessWidget {
         boxShadow: isDark
             ? null
             : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -744,7 +890,8 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: InkWell(
               onTap: () {
-                transactionFilterNotifier.value = type;
+                // Assuming transactionFilterNotifier is defined elsewhere
+                // transactionFilterNotifier.value = type;
                 Navigator.pushNamed(context, '/transaction');
               },
               borderRadius: BorderRadius.circular(10),
