@@ -1,9 +1,13 @@
+import 'package:Thinkpay/model/goal_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
+
+import '../../../core/repository/categoryRepo.dart';
+import '../../../core/repository/trasectionRepo.dart';
 
 /// Optional notifier to set the filter from outside.
 final transactionFilterNotifier = ValueNotifier<TransactionType?>(null);
@@ -20,6 +24,26 @@ class _TransectionState extends State<Transection> {
   final _searchCtrl = TextEditingController();
   TransactionType? _filter; // null = all
   String _query = '';
+  bool _isLoading = false;
+  final _categoryRepo = CategoryRepository();
+  final _transactionRepo = TransactionRepository();
+  String? _error;
+  Future<void> _loadtrasections() async{
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final trasections = await _transactionRepo.getTransactions();
+      _provider.setGoals(trasections.cast<GoalModel>());
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+
+  }
 
   @override
   void initState() {
@@ -32,6 +56,23 @@ class _TransectionState extends State<Transection> {
         () => setState(() => _query = _searchCtrl.text.toLowerCase()));
   }
 
+
+  Future<void> _loadTrasections() async{
+    setState(() => _isLoading = true);
+    try{
+      final trasectionDetails = await Future.wait([
+        _categoryRepo.getCategories(),
+        _transactionRepo.getTransactions(),
+      ]);
+
+    }catch(e){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load Transaction data: ${e.toString()}')),
+      );
+    }finally{
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
   void _onFilterChanged() {
     if (mounted) {
       setState(() => _filter = transactionFilterNotifier.value);
@@ -65,7 +106,6 @@ class _TransectionState extends State<Transection> {
         final all = _provider.transactions.where((t) {
           final matchFilter = _filter == null || t.type == _filter;
           final matchQuery = _query.isEmpty ||
-              t.title.toLowerCase().contains(_query) ||
               t.category.toLowerCase().contains(_query);
           return matchFilter && matchQuery;
         }).toList();
@@ -80,18 +120,15 @@ class _TransectionState extends State<Transection> {
         return Scaffold(
           backgroundColor: tc.background,
           drawerEnableOpenDragGesture: false,
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'fab_transaction',
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'fab_home',
             onPressed: _openAddTransaction,
             backgroundColor: tc.coreAction,
             foregroundColor: tc.background,
-            elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: Text(
-              'Add Transaction',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: const Icon(Icons.add_rounded, size: 24),
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           body: SafeArea(
@@ -199,33 +236,54 @@ class _TransectionState extends State<Transection> {
                 // ── Filter chips ─────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: Row(children: [
-                    _Chip(
-                      label: 'All',
-                      selected: _filter == null,
-                      color: tc.text70,
-                      tc: tc,
-                      onTap: () => setState(() => _filter = null),
-                    ),
-                    const SizedBox(width: 8),
-                    _Chip(
-                      label: '↓ Income',
-                      selected: _filter == TransactionType.income,
-                      color: tc.coreAction,
-                      tc: tc,
-                      onTap: () =>
-                          setState(() => _filter = TransactionType.income),
-                    ),
-                    const SizedBox(width: 8),
-                    _Chip(
-                      label: '↑ Expense',
-                      selected: _filter == TransactionType.expense,
-                      color: tc.accentExpense,
-                      tc: tc,
-                      onTap: () =>
-                          setState(() => _filter = TransactionType.expense),
-                    ),
-                  ]),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: [
+                      _Chip(
+                        label: 'All',
+                        selected: _filter == null,
+                        color: tc.text70,
+                        tc: tc,
+                        onTap: () => setState(() => _filter = null),
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '↓ Income',
+                        selected: _filter == TransactionType.income,
+                        color: tc.coreAction,
+                        tc: tc,
+                        onTap: () =>
+                            setState(() => _filter = TransactionType.income),
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '↑ Expense',
+                        selected: _filter == TransactionType.expense,
+                        color: tc.accentExpense,
+                        tc: tc,
+                        onTap: () =>
+                            setState(() => _filter = TransactionType.expense),
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '↓ Transfer In',
+                        selected: _filter == TransactionType.income,
+                        color: tc.intelligenceAccent,
+                        tc: tc,
+                        onTap: () =>
+                            setState(() => _filter = TransactionType.income),
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: '↑ Transfer Out',
+                        selected: _filter == TransactionType.expense,
+                        color: tc.intelligenceAccent,
+                        tc: tc,
+                        onTap: () =>
+                            setState(() => _filter = TransactionType.expense),
+                      ),
+                    ]),
+                  ),
                 ),
 
                 // ── List ──────────────────────────────────────────────────────
@@ -334,8 +392,13 @@ class _TxTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = t.type == TransactionType.income;
-    final color = isIncome ? tc.coreAction : tc.accentExpense;
+    final isIncome = t.type == TransactionType.income || t.type == TransactionType.otherIn;
+    final isTransfer = t.type == TransactionType.income || t.type == TransactionType.expense;
+    final color = isIncome
+        ? tc.coreAction
+        : isTransfer
+            ? tc.intelligenceAccent
+            : tc.accentExpense;
 
     return Dismissible(
       key: Key(t.id),
@@ -367,16 +430,6 @@ class _TxTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  t.title,
-                  style: GoogleFonts.inter(
-                    color: tc.text100,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 const SizedBox(height: 3),
                 Text(
                   t.category,
@@ -388,7 +441,7 @@ class _TxTile extends StatelessWidget {
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(
-              '${isIncome ? '+' : '−'} Rs. ${_fmt(t.amount)}',
+              '${isIncome ? '+' : isTransfer ? '⇄ ' : '−'} Rs. ${_fmt(t.amount)}',
               style: GoogleFonts.manrope(
                 color: color,
                 fontSize: 14,
@@ -497,6 +550,11 @@ IconData _catIcon(String cat) {
     case 'freelance':     return Icons.work_rounded;
     case 'business':      return Icons.business_center_rounded;
     case 'investment':    return Icons.trending_up_rounded;
+    case 'savings':
+    case 'savings account': return Icons.savings_rounded;
+    case 'brokerage':
+    case 'transfer':
+    case 'bank transfer': return Icons.swap_horiz_rounded;
     case 'gift':          return Icons.card_giftcard_rounded;
     default:              return Icons.receipt_rounded;
   }
