@@ -1,4 +1,4 @@
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -187,7 +187,7 @@ class _ChannelListTile extends StatelessWidget {
     final colors = ThemeColors.of(context);
 
     return InkWell(
-      onTap: () {},
+      onTap: () => Navigator.pushNamed(context, '/community-profile'),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.marginMobile,
