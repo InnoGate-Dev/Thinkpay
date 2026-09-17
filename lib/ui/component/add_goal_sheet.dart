@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constant/app_colors.dart';
+<<<<<<< HEAD
 import '../../core/repository/goalRepo.dart';
+=======
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 

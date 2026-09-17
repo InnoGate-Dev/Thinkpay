@@ -9,6 +9,10 @@ import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_budget_category_sheet.dart';
+<<<<<<< HEAD
+=======
+import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
 /// Published whenever the Finance page's Expense/Income/Transfer tab changes.
 /// AppShell reads this so its FAB can pre-select the correct type.
@@ -31,7 +35,11 @@ class _FinancePageState extends State<FinancePage>
   @override
   void initState() {
     super.initState();
+<<<<<<< HEAD
     _tab = TabController(length: 3, vsync: this); // Expenses, Income, Transfers
+=======
+    _tab = TabController(length: 3, vsync: this);
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     _tab.addListener(() {
       setState(() {});
       financeTabIndexNotifier.value = _tab.index;
@@ -62,9 +70,12 @@ class _FinancePageState extends State<FinancePage>
       );
       _provider.setTransactions(transactions);
     } catch (e) {
+<<<<<<< HEAD
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
       );
+=======
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
       debugPrint('Failed to load financial data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -75,15 +86,47 @@ class _FinancePageState extends State<FinancePage>
     final type = _tab.index == 0
         ? TransactionType.expense
         : _tab.index == 1
+<<<<<<< HEAD
         ? TransactionType.income
         : TransactionType.transferOut; // Transfer tab defaults to transferOut
 
+=======
+            ? TransactionType.income
+            : TransactionType.transfer;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddBudgetCategorySheet(initialType: type),
+<<<<<<< HEAD
     ).then((_) => _loadFinanceData()); // Refresh after sheet closes
+  }
+
+  /// Calls the real DELETE /categories/{id} API and removes the item from the
+  /// local [FinanceProvider], giving user feedback via SnackBar.
+  Future<void> _deleteCategory(int id) async {
+    try {
+      await _categoryRepo.deleteCategory(id);
+      _provider.deleteBudget(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete category: ${e.toString()}'),
+            backgroundColor: ThemeColors.of(context).red,
+          ),
+        );
+      }
+    }
+=======
+    );
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
   }
 
   /// Calls the real DELETE /categories/{id} API and removes the item from the
@@ -123,6 +166,7 @@ class _FinancePageState extends State<FinancePage>
             .where((b) => b.type == TransactionType.income)
             .toList();
         final trfBudgets = _provider.budgets
+<<<<<<< HEAD
             .where((b) =>
                 b.type == TransactionType.transferIn ||
                 b.type == TransactionType.transferOut)
@@ -134,6 +178,12 @@ class _FinancePageState extends State<FinancePage>
         // add a getter that mirrors expenseByCategory/incomeByCategory but
         // filters transactions where type == TransactionType.transferIn or transferOut and
         // groups/sums by category name.
+=======
+            .where((b) => b.type == TransactionType.transfer)
+            .toList();
+        final expActual = _provider.expenseByCategory;
+        final incActual = _provider.incomeByCategory;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
         final trfActual = _provider.transferByCategory;
 
         // ── Pie sections — Expenses ──────────────────────────────────────────
@@ -274,9 +324,15 @@ class _FinancePageState extends State<FinancePage>
                         actualMap: trfActual,
                         pieSections: trfPieSections,
                         catLabels: trfCats.map((e) => e.key).toList(),
+<<<<<<< HEAD
                         accentColor: tc.text70,
                         chartTitle: 'Transfer Breakdown',
                         type: TransactionType.transferOut,
+=======
+                        accentColor: tc.intelligenceAccent,
+                        chartTitle: 'Transfer Breakdown',
+                        type: TransactionType.transfer,
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
                         onDelete: _deleteCategory,
                         onRefresh: _loadFinanceData,
                         tc: tc,
@@ -397,7 +453,11 @@ class _FinanceTab extends StatelessWidget {
             type: type,
             tc: tc,
           ),
+<<<<<<< HEAD
           const SizedBox(height: 16),
+=======
+        const SizedBox(height: 16),
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
           // ── Donut chart ────────────────────────────────────────────────────
           if (pieSections.isNotEmpty) ...[
@@ -508,6 +568,7 @@ class _FinanceTab extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
+<<<<<<< HEAD
           // ── Category progress bars ─────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -574,6 +635,23 @@ class _FinanceTab extends StatelessWidget {
       ),
     );
   }
+=======
+        ...budgets.map(
+          (b) => _FinanceCard(
+            b: b,
+            actual: (actualMap[b.name] != null && actualMap[b.name]! > 0)
+                ? actualMap[b.name]!
+                : b.actualAmount,
+            accentColor: accentColor,
+            onDelete: onDelete,
+            tc: tc,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 }
 
 // ── Finance Category Card ──────────────────────────────────────────────────────
@@ -792,7 +870,11 @@ class _FinanceCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
+<<<<<<< HEAD
                   'Rs. ${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
+=======
+                  'Rs. ${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : b.type == TransactionType.income ? 'received' : 'transferred'}',
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
                   style: GoogleFonts.inter(
                     color: bar,
                     fontSize: 12,
@@ -836,7 +918,11 @@ class _SummaryRow extends StatelessWidget {
     );
     final totalActual = budgets.fold<double>(
       0,
+<<<<<<< HEAD
           (s, b) {
+=======
+      (s, b) {
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
         final val = actualMap[b.name];
         return s + ((val != null && val > 0) ? val : b.actualAmount);
       },

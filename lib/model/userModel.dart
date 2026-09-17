@@ -19,6 +19,7 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
+<<<<<<< HEAD
       id: json['id'] is int
           ? json['id'] as int
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
@@ -31,6 +32,18 @@ class User {
       socialMediaChannelName: json['social_media_channel_name']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
+=======
+      id: json['id'],
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      isLeader: json['is_leader'] ?? false,
+      birthday: json['birthday'] != null
+          ? DateTime.tryParse(json['birthday'])
+          : null,
+      socialMediaChannelName: json['social_media_channel_name'],
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
           : null,
     );
   }

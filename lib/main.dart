@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 import 'package:Thinkpay/ui/pages/finance/finacedashboard.dart';
 import 'package:Thinkpay/ui/pages/loan/loan_list_page.dart';
 
+=======
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 import '../../core/constant/app_colors.dart';
 import '../../core/constant/theme_provider.dart';
 import 'package:Thinkpay/ui/component/navbar.dart';
@@ -29,6 +32,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 void main() async {
+<<<<<<< HEAD
+=======
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);

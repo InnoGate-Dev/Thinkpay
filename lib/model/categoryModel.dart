@@ -6,50 +6,82 @@ import 'package:Thinkpay/model/transaction_model.dart';
 enum CategoryType {
   income,
   expense,
+<<<<<<< HEAD
   transferIn,
   transferOut,
   otherIn,
   otherOut;
+=======
+  transfer;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
   /// The uppercase string value expected by the API (e.g. `"INCOME"`).
   String get apiValue {
     switch (this) {
+<<<<<<< HEAD
       case CategoryType.income: return 'INCOME';
       case CategoryType.expense: return 'EXPENSE';
       case CategoryType.transferIn: return 'TRANSFER_IN';
       case CategoryType.transferOut: return 'TRANSFER_OUT';
       case CategoryType.otherIn: return 'OTHER_IN';
       case CategoryType.otherOut: return 'OTHER_OUT';
+=======
+      case CategoryType.income:
+        return 'INCOME';
+      case CategoryType.expense:
+        return 'EXPENSE';
+      case CategoryType.transfer:
+        return 'TRANSFER';
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     }
   }
 
   /// Converts [CategoryType] to the corresponding UI [TransactionType].
   TransactionType toTransactionType() {
     switch (this) {
+<<<<<<< HEAD
       case CategoryType.income: return TransactionType.income;
       case CategoryType.expense: return TransactionType.expense;
       case CategoryType.transferIn: return TransactionType.income;
       case CategoryType.transferOut: return TransactionType.expense;
       case CategoryType.otherIn: return TransactionType.otherIn;
       case CategoryType.otherOut: return TransactionType.otherOut;
+=======
+      case CategoryType.income:
+        return TransactionType.income;
+      case CategoryType.transfer:
+        return TransactionType.transfer;
+      case CategoryType.expense:
+        return TransactionType.expense;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     }
   }
 
   /// Converts UI [TransactionType] to domain [CategoryType].
   static CategoryType fromTransactionType(TransactionType type) {
     switch (type) {
+<<<<<<< HEAD
       case TransactionType.income: return CategoryType.income;
       case TransactionType.expense: return CategoryType.expense;
       case TransactionType.transferIn: return CategoryType.transferIn;
       case TransactionType.transferOut: return CategoryType.transferOut;
       case TransactionType.otherIn: return CategoryType.otherIn;
       case TransactionType.otherOut: return CategoryType.otherOut;
+=======
+      case TransactionType.income:
+        return CategoryType.income;
+      case TransactionType.transfer:
+        return CategoryType.transfer;
+      case TransactionType.expense:
+        return CategoryType.expense;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     }
   }
 
   /// Parses a raw API string into [CategoryType]. Defaults to [expense].
   static CategoryType fromApi(String value) {
     switch (value.toUpperCase()) {
+<<<<<<< HEAD
       case 'INCOME': return CategoryType.income;
       case 'EXPENSE': return CategoryType.expense;
       case 'TRANSFER_IN': return CategoryType.transferIn;
@@ -58,6 +90,15 @@ enum CategoryType {
       case 'OTHER_OUT': return CategoryType.otherOut;
       case 'TRANSFER': return CategoryType.transferOut;
       default: return CategoryType.expense;
+=======
+      case 'INCOME':
+        return CategoryType.income;
+      case 'TRANSFER':
+        return CategoryType.transfer;
+      case 'EXPENSE':
+      default:
+        return CategoryType.expense;
+>>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     }
   }
 }
