@@ -1,7 +1,6 @@
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/news_model.dart';
 import 'package:Thinkpay/ui/component/news_card.dart';
-import 'package:Thinkpay/ui/component/news_category_chip.dart';
 import 'package:flutter/material.dart';
 
 class NewsPage extends StatefulWidget {
