@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 
-import 'package:Thinkpay/ui/component/navbar.dart';
 import 'package:Thinkpay/ui/pages/home/balancecard.dart';
 import 'package:Thinkpay/ui/pages/home/community_updates.dart';
 import 'package:Thinkpay/ui/pages/home/empty_state.dart';
 import 'package:Thinkpay/ui/pages/home/transaction_list.dart';
-import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -137,27 +135,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              IconButton(
-                onPressed: () => Navigator.pushNamed(context, '/news'),
-                icon: Stack(
-                  children: [
-                    Icon(Icons.newspaper_outlined, color: tc.text70, size: 22),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: tc.coreAction,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: tc.background, width: 1.2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // IconButton(
+              //   onPressed: () => Navigator.pushNamed(context, '/news'),
+              //   icon: Stack(
+              //     children: [
+              //       Icon(Icons.newspaper_outlined, color: tc.text70, size: 22),
+              //       Positioned(
+              //         top: 0,
+              //         right: 0,
+              //         child: Container(
+              //           width: 7,
+              //           height: 7,
+              //           decoration: BoxDecoration(
+              //             color: tc.coreAction,
+              //             shape: BoxShape.circle,
+              //             border: Border.all(color: tc.background, width: 1.2),
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
               const SizedBox(width: 4),
             ],
           ),

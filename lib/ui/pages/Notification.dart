@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import '../../core/constant/app_colors.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
@@ -60,7 +60,7 @@ class NotificationStore extends ChangeNotifier {
       _items.add(AppNotification(
         id: 'tx_${t.id}',
         title: isIncome ? '💰 Income Received' : '💸 Expense Recorded',
-        body: '${t.title} — Rs. ${_fmt(t.amount)} in ${t.category}.',
+        body: 'Rs. ${_fmt(t.amount)} in ${t.category}.',
         type: NotifType.newTransaction,
         time: t.date,
         isRead: !isIncome, // mark expense ones as read for demo variety

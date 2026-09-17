@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/ui/pages/home/home_helpers.dart';
 
 // ── Balance card ──────────────────────────────────────────────────────────────
@@ -109,35 +109,7 @@ class BalanceCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           // Income Growth Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: tc.coreAction.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: tc.coreAction.withValues(alpha: 0.2),
-                              )
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.arrow_upward_rounded,
-                                  size: 12,
-                                  color: tc.coreAction,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '+$incomeGrowth% vs last month',
-                                  style: GoogleFonts.inter(
-                                    color: tc.coreAction,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+
                         ],
                       ),
                     ),
@@ -189,29 +161,6 @@ class BalanceCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 24),
-                
-                // ── Visual Expense Ratio Bar ──
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    height: 8,
-                    width: double.infinity,
-                    color: isDark ? const Color(0xFF2A2E39) : const Color(0xFFEDF1F5),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: expenseRatio,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: tc.accentExpense,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                
                 const SizedBox(height: 16),
                 
                 // ── Income & Expenses Stats ──

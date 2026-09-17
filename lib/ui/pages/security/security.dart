@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 
 class SecurityPage extends StatefulWidget {
   const SecurityPage({super.key});
@@ -123,7 +123,7 @@ class _SwitchRow extends StatelessWidget {
             Text(label, style: TextStyle(color: tc.text100, fontSize: 14)),
             Text(subtitle, style: TextStyle(color: tc.text40, fontSize: 11)),
           ])),
-          Switch(value: value, onChanged: onChanged, activeColor: tc.lime, activeTrackColor: tc.lime.withValues(alpha: 0.3)),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: tc.lime, activeTrackColor: tc.lime.withValues(alpha: 0.3)),
         ]));
 }
 

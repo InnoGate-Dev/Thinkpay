@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
-import 'package:Thinkpay/constant/theme_provider.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/theme_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
-import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/support/support.dart';
 
@@ -99,28 +98,12 @@ class ProfileDrawer extends StatelessWidget {
                     // Dark/Light mode toggle
                     _ThemeToggleItem(isDark: isDark, tc: tc),
 
-                    // Overview → navigates to Profile page
-                    _SettingsItem(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Overview',
-                      tc: tc,
-                      onTap: () => _navigate(context, const Profile()),
-                    ),
-
                     // Profile → navigates to Profile page (same)
                     _SettingsItem(
                       icon: Icons.person_outline_rounded,
                       label: 'Profile',
                       tc: tc,
                       onTap: () => _navigate(context, const Profile()),
-                    ),
-
-                    // Edit Profile → navigates to EditProfile
-                    _SettingsItem(
-                      icon: Icons.edit_outlined,
-                      label: 'Edit Profile',
-                      tc: tc,
-                      onTap: () => _navigate(context, const EditProfilePage()),
                     ),
 
                     // Currency picker
@@ -227,7 +210,7 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
             shrinkWrap: true,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             itemCount: currencies.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: tc.border),
+            separatorBuilder: (_, _) => Divider(height: 1, color: tc.border),
             itemBuilder: (_, i) {
               final c = currencies[i];
               final isSelected = c.code == _selected.code;

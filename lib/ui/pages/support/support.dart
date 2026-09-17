@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});

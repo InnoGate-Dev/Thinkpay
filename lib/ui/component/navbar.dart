@@ -1,17 +1,15 @@
-import 'package:Thinkpay/ui/pages/community/communityUpdate.dart';
 import 'package:Thinkpay/ui/pages/goal/Goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
-import 'package:Thinkpay/model/transaction_model.dart';
+import '../../core/constant/app_colors.dart';
 
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
 import 'package:Thinkpay/ui/pages/home/home.dart';
-import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 import 'package:Thinkpay/ui/pages/home/drawersection.dart';
 
-import '../pages/finance/finance.dart';
+import '../pages/finance/finacedashboard.dart';
+import '../pages/loan/loan_list_page.dart';
 
 /// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
 final drawerOpenNotifier = ValueNotifier<bool>(false);
@@ -33,12 +31,13 @@ class _AppShellState extends State<AppShell>
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    FinancePage(),
-    Aichat(),
-    CommunityUpdatePage(),
-    SetGoalPage(),
+  final List<Widget> _pages = [
+    const HomeScreen(),
+    const FinanceDashboardPage(),
+    const Aichat(),
+    LoanListPage(),
+    // CommunityUpdatePage(),
+    const SetGoalPage(),
   ];
 
   @override
@@ -48,10 +47,12 @@ class _AppShellState extends State<AppShell>
     appShellIndexNotifier.value = _currentIndex;
     appShellIndexNotifier.addListener(_onIndexChangedExternally);
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarIconBrightness: Brightness.light,
-      statusBarColor: Colors.transparent,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarIconBrightness: Brightness.light,
+        statusBarColor: Colors.transparent,
+      ),
+    );
 
     _fadeCtrl = AnimationController(
       vsync: this,
@@ -82,8 +83,6 @@ class _AppShellState extends State<AppShell>
     _fadeCtrl.forward();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -94,10 +93,7 @@ class _AppShellState extends State<AppShell>
 
       body: FadeTransition(
         opacity: _fadeAnim,
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _pages),
       ),
       bottomNavigationBar: ValueListenableBuilder<bool>(
         valueListenable: drawerOpenNotifier,
@@ -123,10 +119,7 @@ class _AppShellState extends State<AppShell>
 
 // ── Nav bar ───────────────────────────────────────────────────────────────────
 class _ThinkPayNavBar extends StatelessWidget {
-  const _ThinkPayNavBar({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _ThinkPayNavBar({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -180,10 +173,19 @@ class _ThinkPayNavBar extends StatelessWidget {
                 onTap: () => onTap(2),
                 tc: tc,
               ),
+              // _NavTab(
+              //   icon: Icons.groups_2_outlined,
+              //   activeIcon: Icons.groups_2,
+              //   label: 'Community',
+              //   index: 3,
+              //   current: currentIndex,
+              //   onTap: onTap,
+              //   tc: tc,
+              // ),
               _NavTab(
-                icon: Icons.groups_2_outlined,
-                activeIcon: Icons.groups_2,
-                label: 'Community',
+                icon: Icons.handshake_outlined,
+                activeIcon: Icons.handshake,
+                label: 'Loan',
                 index: 3,
                 current: currentIndex,
                 onTap: onTap,
@@ -243,7 +245,7 @@ class _AiCenterTab extends StatelessWidget {
                         blurRadius: 10,
                         spreadRadius: 0,
                         offset: const Offset(0, 2),
-                      )
+                      ),
                     ]
                   : null,
             ),

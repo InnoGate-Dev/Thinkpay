@@ -1,4 +1,4 @@
-import 'package:Thinkpay/constant/app_colors.dart';
+import '../../core/constant/app_colors.dart';
 import 'package:Thinkpay/model/news_model.dart';
 import 'package:flutter/material.dart';
 

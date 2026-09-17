@@ -481,8 +481,8 @@ class _InputField extends StatelessWidget {
     required this.isFocused,
     required this.hintText,
     required this.icon,
-    this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.obscureText = false,
     this.suffix,
   });
 

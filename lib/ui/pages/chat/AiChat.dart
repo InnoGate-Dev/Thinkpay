@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/chat_message_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
@@ -75,7 +75,7 @@ class _AichatState extends State<Aichat> {
     _focusNode.requestFocus(); // keep keyboard open
 
     _provider.addMessage(ChatMessage(
-      id: _provider.newId(),
+      id: _provider.newId().toString(),
       content: text,
       isUser: true,
       timestamp: DateTime.now(),
@@ -88,7 +88,7 @@ class _AichatState extends State<Aichat> {
 
     if (!mounted) return;
     _provider.addMessage(ChatMessage(
-      id: _provider.newId(),
+      id: _provider.newId().toString(),
       content: _generateResponse(text),
       isUser: false,
       timestamp: DateTime.now(),

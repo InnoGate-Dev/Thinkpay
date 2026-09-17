@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Thinkpay/constant/app_colors.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 
 class EditProfilePage extends StatefulWidget {
