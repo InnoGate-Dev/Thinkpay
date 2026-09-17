@@ -153,10 +153,7 @@ class ApiClient {
         CancelToken? cancelToken,
       }) async {
     try {
-<<<<<<< HEAD
       print("SENDING POST REQUEST");
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
       final response = await _dio.post(
         path,
         data: data,
@@ -164,10 +161,7 @@ class ApiClient {
         options: options,
         cancelToken: cancelToken,
       );
-<<<<<<< HEAD
       print("POST RESPONSE => $response");
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
       return response.data;
     } on DioException catch (e) {
       throw _mapDioException(e);

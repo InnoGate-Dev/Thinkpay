@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/chat_message_model.dart';
-import 'package:Thinkpay/ui/pages/goal/goal_model.dart';
+import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 
 class FinanceProvider extends ChangeNotifier {
@@ -53,22 +53,14 @@ class FinanceProvider extends ChangeNotifier {
 
   Map<String, double> get transferByCategory {
     final map = <String, double>{};
-<<<<<<< HEAD
     for (final t in _transactions.where((t) => t.type == TransactionType.income || t.type == TransactionType.expense)) {
-=======
-    for (final t in _transactions.where((t) => t.type == TransactionType.transfer)) {
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
       map[t.category] = (map[t.category] ?? 0) + t.amount;
     }
     return map;
   }
 
   double get totalTransfers =>
-<<<<<<< HEAD
       _transactions.where((t) => t.type == TransactionType.income || t.type == TransactionType.expense)
-=======
-      _transactions.where((t) => t.type == TransactionType.transfer)
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
           .fold(0, (s, t) => s + t.amount);
 
   List<TransactionModel> get recentTransactions =>
@@ -91,11 +83,7 @@ class FinanceProvider extends ChangeNotifier {
   /// Names of budget categories for transfer type (used by transaction picker).
   List<String> get transferBudgetCategories =>
       _budgets
-<<<<<<< HEAD
           .where((b) => b.type == TransactionType.income || b.type == TransactionType.expense)
-=======
-          .where((b) => b.type == TransactionType.transfer)
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
           .map((b) => b.name)
           .toList();
 

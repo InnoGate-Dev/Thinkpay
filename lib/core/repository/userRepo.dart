@@ -21,13 +21,8 @@ class UserRepository {
 
   UserRepository() {
     final client = ApiClient(baseUrl: AppConfig.baseUrl);
-<<<<<<< HEAD
     _authService = AuthService(client);
     _userService = UserService(client);
-=======
-    _authService  = AuthService(client);
-    _userService  = UserService(client);
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     _leaderService = LeaderService(client);
   }
 
@@ -104,7 +99,6 @@ class UserRepository {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
   /// Parses a raw auth response map, saves the token + expiry, and returns [AuthResponse].
   Future<AuthResponse> _parseAndPersistAuth(Map<String, dynamic> raw) async {
     final authResponse = AuthResponse.fromJson(raw);
@@ -112,19 +106,12 @@ class UserRepository {
     if (authResponse.expiresAt != null) {
       await _tokenStorage.saveExpiresAt(authResponse.expiresAt!);
     }
-=======
-  /// Parses a raw auth response map, saves the token, and returns [AuthResponse].
-  Future<AuthResponse> _parseAndPersistAuth(Map<String, dynamic> raw) async {
-    final authResponse = AuthResponse.fromJson(raw);
-    await _tokenStorage.saveToken(authResponse.token);
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     return authResponse;
   }
 
   /// Returns the currently stored [User] token, or null if not authenticated.
   Future<String?> getStoredToken() => _tokenStorage.getToken();
 
-<<<<<<< HEAD
   /// Returns true if a valid, non-expired JWT is currently stored.
   Future<bool> get isLoggedIn async {
     final token = await _tokenStorage.getToken();
@@ -136,11 +123,5 @@ class UserRepository {
       return false;
     }
     return true;
-=======
-  /// Returns true if a JWT is currently stored (user is logged in).
-  Future<bool> get isLoggedIn async {
-    final token = await _tokenStorage.getToken();
-    return token != null && token.isNotEmpty;
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
   }
 }

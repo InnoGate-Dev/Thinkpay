@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constant/app_colors.dart';
-<<<<<<< HEAD
-=======
-import 'package:Thinkpay/model/transaction_model.dart';
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
 import 'package:Thinkpay/ui/pages/chat/AiChat.dart';
 import 'package:Thinkpay/ui/pages/home/home.dart';

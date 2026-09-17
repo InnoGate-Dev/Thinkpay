@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import '../util/loan_format.dart';
 import 'loan_payment_model.dart';
-=======
-import 'loan_payment_model.dart';
-import '../utils/loan_format.dart';
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
 enum LoanStatus { active, paidOff, overdue }
 

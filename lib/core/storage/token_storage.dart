@@ -2,10 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenStorage {
   static const _tokenKey = 'auth_token';
-<<<<<<< HEAD
   static const _expiresAtKey = 'auth_expires_at';
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,7 +17,6 @@ class TokenStorage {
   Future<void> deleteToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
-<<<<<<< HEAD
     await prefs.remove(_expiresAtKey);
   }
 
@@ -33,7 +29,5 @@ class TokenStorage {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_expiresAtKey);
     return raw != null ? DateTime.tryParse(raw) : null;
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
   }
 }

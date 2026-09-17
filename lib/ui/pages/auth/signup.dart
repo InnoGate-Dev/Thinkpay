@@ -2,14 +2,9 @@ import 'package:Thinkpay/core/repository/userRepo.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
-<<<<<<< HEAD
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/errors/exceptions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-=======
-import 'package:Thinkpay/core/repository/userRepo.dart';
-import 'package:google_fonts/google_fonts.dart';
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
 
 enum _UserRole { member, leader }
 
@@ -38,7 +33,6 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
   late AnimationController _leaderCardController;
   late Animation<double> _leaderCardAnimation;
 
-<<<<<<< HEAD
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -149,8 +143,6 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
   }
     
 
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
   @override
   void initState() {
     super.initState();
@@ -215,12 +207,7 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
                     onPrimary: Colors.white,
                     surface: tc.surface,
                     onSurface: tc.text100,
-<<<<<<< HEAD
                   ), dialogTheme: DialogThemeData(backgroundColor: tc.surface),
-=======
-                  ),
-            dialogBackgroundColor: tc.surface,
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
           ),
           child: child!,
         );
@@ -276,7 +263,6 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
           ),
         );
       }
-<<<<<<< HEAD
     } on ApiException catch (e) {
       debugPrint('SIGNUP API ERROR: $e');
       if (!mounted) return;
@@ -286,8 +272,6 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
           duration: const Duration(seconds: 6),
         ),
       );
-=======
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     } catch (e, st) {
       debugPrint('SIGNUP ERROR: $e\n$st');
       if (!mounted) return;
@@ -567,11 +551,7 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
                       backgroundColor: tc.intelligenceAccent,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor:
-<<<<<<< HEAD
                           tc.intelligenceAccent.withValues(alpha: 0.6),
-=======
-                          tc.intelligenceAccent.withOpacity(0.6),
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

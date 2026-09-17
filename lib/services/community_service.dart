@@ -16,13 +16,8 @@ class CommunityService {
     final data = {
       'name': name,
       'description': description,
-<<<<<<< HEAD
       'logo_url': ?logoUrl,
       'banner_url': ?bannerUrl,
-=======
-      if (logoUrl != null) 'logo_url': logoUrl,
-      if (bannerUrl != null) 'banner_url': bannerUrl,
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     };
     return await _apiClient.post(ApiEndpoints.communities, data: data) as Map<String, dynamic>;
   }
@@ -41,13 +36,8 @@ class CommunityService {
     final data = {
       'name': name,
       'description': description,
-<<<<<<< HEAD
       'logo_url': ?logoUrl,
       'banner_url': ?bannerUrl,
-=======
-      if (logoUrl != null) 'logo_url': logoUrl,
-      if (bannerUrl != null) 'banner_url': bannerUrl,
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     };
     return await _apiClient.put(ApiEndpoints.communityById(id), data: data) as Map<String, dynamic>;
   }

@@ -26,13 +26,8 @@ class CategoryService {
     final body = <String, dynamic>{
       'name': name,
       'type': type,
-<<<<<<< HEAD
       'actual_amount': ?actualAmount,
       'expected_amount': ?expectedAmount,
-=======
-      if (actualAmount != null) 'actual_amount': actualAmount,
-      if (expectedAmount != null) 'expected_amount': expectedAmount,
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     };
     final response =
         await _apiClient.post(ApiEndpoints.categories, data: body);
@@ -80,13 +75,8 @@ class CategoryService {
     final body = <String, dynamic>{
       'name': name,
       'type': type,
-<<<<<<< HEAD
       'actual_amount': ?actualAmount,
       'expected_amount': ?expectedAmount,
-=======
-      if (actualAmount != null) 'actual_amount': actualAmount,
-      if (expectedAmount != null) 'expected_amount': expectedAmount,
->>>>>>> 7f6af26f56c35ce219fd0a1e9bebf8d9a6be70f7
     };
     final response =
         await _apiClient.put(ApiEndpoints.categoryById(id), data: body);
