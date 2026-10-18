@@ -45,4 +45,13 @@ class ApiEndpoints {
   static const String loans = '/loans';
   static String loanById(int id) => '/loans/$id';
   static String loanPayments(int loanId) => '/loans/$loanId/payments';
+
+  // goal transaction
+
+  static String getgoalTrasection() => '/goaltransactions';
+  static String CreateGoalTrasection() => '/goaltransactions';
+  static String UpdateGoalTrasections(int goal_Id) => '/goaltransactions/$goal_Id';
+  static String DeleteGoalTrasections(int goal_Id) => '/goaltransactions/$goal_Id';
+
+
 }
