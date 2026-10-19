@@ -50,8 +50,8 @@ class ApiEndpoints {
 
   static String getgoalTrasection() => '/goaltransactions';
   static String CreateGoalTrasection() => '/goaltransactions';
-  static String UpdateGoalTrasections(int goal_Id) => '/goaltransactions/$goal_Id';
-  static String DeleteGoalTrasections(int goal_Id) => '/goaltransactions/$goal_Id';
+  static String UpdateGoalTrasections(int goalId) => '/goaltransactions/$goalId';
+  static String DeleteGoalTrasections(int goalId) => '/goaltransactions/$goalId';
 
 
 }

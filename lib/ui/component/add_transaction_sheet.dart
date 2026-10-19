@@ -15,9 +15,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _amountCtrl = TextEditingController();
   final _noteCtrl   = TextEditingController();
 
-  TransactionType _type     = TransactionType.expense;
+  TransactionType _type = TransactionType.expense;
   String?         _category;
-  DateTime        _date     = DateTime.now();
+  DateTime        _date = DateTime.now();
 
   /// Categories are sourced exclusively from budget entries.
   List<String> get _categories {
@@ -157,6 +157,41 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               style: AppTypography.bodySm.copyWith(color: tc.text40),
             ),
             const SizedBox(height: 20),
+
+            // ── Type Toggle
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: tc.surface2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  _TypeBtn(
+                    label: 'Expense',
+                    icon: Icons.arrow_upward_rounded,
+                    selected: _type == TransactionType.expense,
+                    color: tc.red,
+                    onTap: () => setState(() {
+                      _type = TransactionType.expense;
+                      _category = null;
+                    }),
+                  ),
+                  _TypeBtn(
+                    label: 'Income',
+                    icon: Icons.arrow_downward_rounded,
+                    selected: _type == TransactionType.income,
+                    color: tc.lime,
+                    onTap: () => setState(() {
+                      _type = TransactionType.income;
+                      _category = null;
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // ── Amount
             _Label('Amount (Rs.)', tc),
             const SizedBox(height: 8),
@@ -272,6 +307,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ]),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // ── Notes
+            _Label('Notes', tc),
+            const SizedBox(height: 8),
+            _StyledField(
+              controller: _noteCtrl,
+              hint: 'Add a note (optional)',
+              icon: Icons.notes_rounded,
+              tc: tc,
+              accentColor: accentColor,
+            ),
             const SizedBox(height: 28),
 
             // ── Submit
@@ -311,6 +358,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 // ── Type toggle button ────────────────────────────────────────────────────────
 class _TypeBtn extends StatelessWidget {
   const _TypeBtn({
+    super.key,
     required this.label,
     required this.icon,
     required this.selected,
@@ -443,6 +491,7 @@ class _AmountFieldState extends State<_AmountField> {
 // ── Shared styled text field ──────────────────────────────────────────────────
 class _StyledField extends StatefulWidget {
   const _StyledField({
+    super.key,
     required this.controller,
     required this.hint,
     required this.icon,

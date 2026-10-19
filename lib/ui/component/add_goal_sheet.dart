@@ -1,3 +1,4 @@
+import 'package:Thinkpay/core/repository/goalTrasection.dart';
 import 'package:flutter/material.dart';
 import '../../core/constant/app_colors.dart';
 import '../../core/repository/goalRepo.dart';
@@ -202,15 +203,15 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                 tc: tc),
             const SizedBox(height: 14),
 
-            _Label('Actual Amount (Rs.)', tc),
-            const SizedBox(height: 6),
-            _Field(
-                controller: _actualAmountCtrl,
-                hint: '500.00',
-                icon: Icons.account_balance_wallet_rounded,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                tc: tc),
-            const SizedBox(height: 14),
+            // _Label('Actual Amount (Rs.)', tc),
+            // const SizedBox(height: 6),
+            // _Field(
+            //     controller: _actualAmountCtrl,
+            //     hint: '500.00',
+            //     icon: Icons.account_balance_wallet_rounded,
+            //     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            //     tc: tc),
+            // const SizedBox(height: 14),
 
             _Label('Target Amount (Rs.)', tc),
             const SizedBox(height: 6),
@@ -287,11 +288,57 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
   Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
+
+    // ── Validation: valid positive amount ───────────────────────────────────
     if (amount == null || amount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Enter a valid amount.'),
+          content: const Text('Please enter a valid amount greater than 0.'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+      return;
+    }
+
+    // ── Validation: goal not already complete ───────────────────────────────
+    if (widget.goal.isCompleted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Goal "${widget.goal.name}" is already complete! 🎉'),
+          backgroundColor: ThemeColors.of(context).lime,
+        ),
+      );
+      return;
+    }
+
+    // ── Validation: amount must not exceed remaining balance ─────────────────
+    final remaining = widget.goal.remaining;
+    if (amount > remaining) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Amount exceeds remaining balance '
+            '(Rs. ${remaining.toStringAsFixed(2)}). '
+            'Please enter a smaller amount.',
+          ),
+          backgroundColor: ThemeColors.of(context).red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // ── Parse numeric goal ID from composite string e.g. "42_S" → 42 ────────
+    final idParts      = widget.goal.id.split('_');
+    final numericGoalId = int.tryParse(idParts.first);
+    if (numericGoalId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid goal ID format: "${widget.goal.id}".'),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
@@ -300,29 +347,48 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
     setState(() => _submitting = true);
     try {
-      final repo     = GoalRepository();
-      final provider = FinanceProvider();
+      final repo                = GoalRepository();
+      final goalTransactionRepo = GoalTrasectionRepository();
+      final provider            = FinanceProvider();
+      final now                 = DateTime.now();
 
+      // Capture completion state BEFORE the update
+      final wasComplete = widget.goal.isCompleted;
+
+      // Update goal saved amount on the backend
       final updated = await repo.addAmountToGoal(
         widget.goal.id,
         amount,
         widget.goal,
       );
 
+      // Record the goal transaction
+      final addtotrasection = await goalTransactionRepo.createGoalTrasection(
+        goalId: numericGoalId,
+        amount: amount,
+        transactionDateTime: now,
+      );
+      print("====");
+      print(addtotrasection);
       // Sync provider with the backend response
       provider.addAmountToGoal(widget.goal.id, updated.savedAmount);
 
       if (!mounted) return;
-      Navigator.pop(context);
 
-      if (updated.isCompleted) {
+      // Show completion snackbar ONLY when the goal JUST became complete
+      // (was not complete before, is complete now)
+      final justCompleted = !wasComplete && updated.isCompleted;
+      if (justCompleted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 Goal "${widget.goal.name}" completed!'),
+            content: Text('🎉 Goal "${widget.goal.name}" is now complete!'),
             backgroundColor: ThemeColors.of(context).lime,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
+
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -340,6 +406,8 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
   Widget build(BuildContext context) {
     final tc          = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final remaining   = widget.goal.remaining;
+    final progress    = widget.goal.progress;
 
     return Container(
       decoration: BoxDecoration(
@@ -369,15 +437,65 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
             'How much are you adding to this goal?',
             style: TextStyle(color: tc.text40, fontSize: 13),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
 
-          _Label('Amount (Rs.)', tc),
+          // ── Goal progress info ─────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: tc.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: tc.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Saved: Rs. ${widget.goal.savedAmount.toStringAsFixed(2)}',
+                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    ),
+                    Text(
+                      'Target: Rs. ${widget.goal.targetAmount.toStringAsFixed(2)}',
+                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: tc.text20,
+                    valueColor: AlwaysStoppedAnimation<Color>(tc.lime),
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  remaining <= 0
+                      ? 'Goal already complete! 🎉'
+                      : 'Remaining: Rs. ${remaining.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: remaining <= 0 ? tc.lime : tc.text40,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _Label('Amount to Add (Rs.)', tc),
           const SizedBox(height: 6),
           _Field(
               controller: _amountCtrl,
               hint: '0.00',
               icon: Icons.currency_rupee_rounded,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               tc: tc),
           const SizedBox(height: 24),
 

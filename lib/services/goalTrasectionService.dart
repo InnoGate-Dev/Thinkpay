@@ -24,8 +24,8 @@ class Goaltrasectionservice {
   }) async {
     final data = {
       'goal_id': goalId,
-      'amount': amount,
-      'transaction_date': transactionDateTime.toIso8601String(),
+      'amount': amount.toString(),
+      'transaction_date': transactionDateTime.toUtc().toIso8601String(),
     };
     final response = await _apiClient.post(
       ApiEndpoints.CreateGoalTrasection(),
