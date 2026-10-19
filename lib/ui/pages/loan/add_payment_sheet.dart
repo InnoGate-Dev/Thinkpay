@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 
+import '../../../core/errors/exceptions.dart';
 import '../../../model/loan_model.dart';
 import '../../../model/loan_payment_model.dart';
 import '../../../services/loan_service.dart';
@@ -33,8 +34,11 @@ class _AddPaymentSheet extends StatefulWidget {
 }
 
 class _AddPaymentSheetState extends State<_AddPaymentSheet> {
-  late final TextEditingController _amountCtrl =
-      TextEditingController(text: widget.loan.monthlyPayment.toStringAsFixed(2));
+  late final TextEditingController _amountCtrl = TextEditingController(
+    text: widget.loan.monthlyPayment % 1 == 0
+        ? widget.loan.monthlyPayment.toInt().toString()
+        : widget.loan.monthlyPayment.toStringAsFixed(2),
+  );
   final TextEditingController _noteCtrl = TextEditingController();
   late DateTime _paidAt = DateTime.now();
   bool _submitting = false;
@@ -68,11 +72,15 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
         ),
       );
       if (mounted) Navigator.pop(context, payment);
-    } catch (_) {
-      setState(() {
-        _error = 'Could not record the payment. Please try again.';
-        _submitting = false;
-      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e is ApiException
+              ? e.message
+              : 'Could not record the payment. Please try again.';
+          _submitting = false;
+        });
+      }
     }
   }
 
@@ -125,11 +133,18 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
             InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () async {
+                final now = DateTime.now();
+                final firstDate = widget.loan.startDate.isAfter(now)
+                    ? now.subtract(const Duration(days: 365))
+                    : widget.loan.startDate;
+                final initialDate = _paidAt.isBefore(firstDate)
+                    ? firstDate
+                    : (_paidAt.isAfter(now) ? now : _paidAt);
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _paidAt,
-                  firstDate: widget.loan.startDate,
-                  lastDate: DateTime.now(),
+                  initialDate: initialDate,
+                  firstDate: firstDate,
+                  lastDate: now,
                 );
                 if (picked != null) setState(() => _paidAt = picked);
               },
@@ -150,20 +165,20 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
             ),
             const SizedBox(height: 14),
 
-            Text('Note (optional)', style: GoogleFonts.inter(color: tc.text70, fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _noteCtrl,
-              style: GoogleFonts.inter(color: tc.text100, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'e.g. Paid via bank transfer',
-                hintStyle: GoogleFonts.inter(color: tc.text20, fontSize: 13),
-                filled: true,
-                fillColor: tc.surface2,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
+            // Text('Note (optional)', style: GoogleFonts.inter(color: tc.text70, fontSize: 12, fontWeight: FontWeight.w600)),
+            // const SizedBox(height: 6),
+            // TextField(
+            //   controller: _noteCtrl,
+            //   style: GoogleFonts.inter(color: tc.text100, fontSize: 13),
+            //   decoration: InputDecoration(
+            //     hintText: 'e.g. Paid via bank transfer',
+            //     hintStyle: GoogleFonts.inter(color: tc.text20, fontSize: 13),
+            //     filled: true,
+            //     fillColor: tc.surface2,
+            //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            //     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            //   ),
+            // ),
 
             if (_error != null) ...[
               const SizedBox(height: 10),
