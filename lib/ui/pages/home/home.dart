@@ -178,47 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              CommunityUpdatesSection(tc: tc),
-
-              const SizedBox(height: 10),
-
-              // ── Recent transactions ─────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Activity',
-                    style: GoogleFonts.manrope(
-                      color: tc.text100,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/transaction');
-                    },
-                    child: Text(
-                      'See all',
-                      style: GoogleFonts.inter(
-                        color: tc.coreAction,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              if (recent.isEmpty)
-                EmptyState(
-                  message: 'No transactions yet.\nTap + to record one.',
-                  tc: tc,
-                ),
-              if (recent.isNotEmpty)
-                TransactionList(transactions: recent, tc: tc),
+              //  CommunityUpdatesSection(tc: tc),
+             // const SizedBox(height: 10),
+              // if (recent.isEmpty)
+              //   EmptyState(
+              //     message: 'No transactions yet.\nTap + to record one.',
+              //     tc: tc,
+              //   ),
+              // if (recent.isNotEmpty)
+              //   TransactionList(transactions: recent, tc: tc),
             ],
           ),
         );
