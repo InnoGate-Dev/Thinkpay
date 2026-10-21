@@ -22,7 +22,7 @@ class AddGoalSheet extends StatefulWidget {
 }
 
 class _AddGoalSheetState extends State<AddGoalSheet> {
-  final _nameCtrl         = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _targetAmountCtrl = TextEditingController();
   final _actualAmountCtrl = TextEditingController();
   late GoalType _type;
@@ -34,12 +34,12 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      _nameCtrl.text         = widget.existing!.name;
+      _nameCtrl.text = widget.existing!.name;
       _targetAmountCtrl.text = widget.existing!.targetAmount.toStringAsFixed(2);
       _actualAmountCtrl.text = widget.existing!.savedAmount.toStringAsFixed(2);
-      _type                  = widget.existing!.type;
+      _type = widget.existing!.type;
     } else {
-      _type                  = widget.initialType ?? GoalType.savings;
+      _type = widget.initialType ?? GoalType.savings;
       _actualAmountCtrl.text = '0.00';
     }
   }
@@ -53,15 +53,20 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   }
 
   Future<void> _submit() async {
-    final name         = _nameCtrl.text.trim();
-    final targetAmount = double.tryParse(_targetAmountCtrl.text.replaceAll(',', ''));
-    final actualAmount = double.tryParse(_actualAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
+    final name = _nameCtrl.text.trim();
+    final targetAmount = double.tryParse(
+      _targetAmountCtrl.text.replaceAll(',', ''),
+    );
+    final actualAmount =
+        double.tryParse(_actualAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
 
     if (name.isEmpty || targetAmount == null || targetAmount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter a goal name and valid target amount.'),
+          content: const Text(
+            'Please enter a goal name and valid target amount.',
+          ),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
@@ -83,7 +88,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 
     setState(() => _submitting = true);
     try {
-      final repo     = GoalRepository();
+      final repo = GoalRepository();
       final provider = FinanceProvider();
 
       if (_isEditing) {
@@ -129,9 +134,11 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tc          = ThemeColors.of(context);
+    final tc = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final accent      = _type == GoalType.savings ? tc.lime : const Color(0xFF72B4FF);
+    final accent = _type == GoalType.savings
+        ? tc.lime
+        : const Color(0xFF72B4FF);
 
     return Container(
       decoration: BoxDecoration(
@@ -147,19 +154,22 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             // handle
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                    color: tc.text20,
-                    borderRadius: BorderRadius.circular(4)),
+                  color: tc.text20,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Edit Goal' : 'Create New Goal',
               style: TextStyle(
-                  color: tc.text100,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700),
+                color: tc.text100,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -173,54 +183,64 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             // Type toggle
             Container(
               decoration: BoxDecoration(
-                  color: tc.surface2,
-                  borderRadius: BorderRadius.circular(14)),
-              child: Row(children: [
-                _TypeBtn(
-                  label: 'Savings',
-                  icon: Icons.savings_rounded,
-                  selected: _type == GoalType.savings,
-                  color: tc.lime,
-                  onTap: () => setState(() => _type = GoalType.savings),
-                ),
-                _TypeBtn(
-                  label: 'Investment',
-                  icon: Icons.trending_up_rounded,
-                  selected: _type == GoalType.investment,
-                  color: const Color(0xFF72B4FF),
-                  onTap: () => setState(() => _type = GoalType.investment),
-                ),
-              ]),
+                color: tc.surface2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  _TypeBtn(
+                    label: 'Savings',
+                    icon: Icons.savings_rounded,
+                    selected: _type == GoalType.savings,
+                    color: tc.lime,
+                    onTap: () => setState(() => _type = GoalType.savings),
+                  ),
+                  _TypeBtn(
+                    label: 'Investment',
+                    icon: Icons.trending_up_rounded,
+                    selected: _type == GoalType.investment,
+                    color: const Color(0xFF72B4FF),
+                    onTap: () => setState(() => _type = GoalType.investment),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
             _Label('Goal Name', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _nameCtrl,
-                hint: 'e.g. Emergency Fund',
-                icon: Icons.flag_rounded,
-                tc: tc),
+              controller: _nameCtrl,
+              hint: 'e.g. Emergency Fund',
+              icon: Icons.flag_rounded,
+              tc: tc,
+            ),
             const SizedBox(height: 14),
 
-            // _Label('Actual Amount (Rs.)', tc),
-            // const SizedBox(height: 6),
-            // _Field(
-            //     controller: _actualAmountCtrl,
-            //     hint: '500.00',
-            //     icon: Icons.account_balance_wallet_rounded,
-            //     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            //     tc: tc),
-            // const SizedBox(height: 14),
+            _Label('Expected Monthly Spent Amount', tc),
+            const SizedBox(height: 6),
+            _Field(
+              controller: _actualAmountCtrl,
+              hint: '500.00',
+              icon: Icons.account_balance_wallet_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              tc: tc,
+            ),
+            const SizedBox(height: 14),
 
             _Label('Target Amount (Rs.)', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _targetAmountCtrl,
-                hint: '6000.00',
-                icon: Icons.currency_rupee_rounded,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                tc: tc),
+              controller: _targetAmountCtrl,
+              hint: '6000.00',
+              icon: Icons.currency_rupee_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              tc: tc,
+            ),
             const SizedBox(height: 24),
 
             SizedBox(
@@ -234,7 +254,8 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                   disabledBackgroundColor: accent.withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: _submitting
                     ? SizedBox(
@@ -248,7 +269,9 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                     : Text(
                         _isEditing ? 'Save Changes' : 'Create Goal',
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w700),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
               ),
             ),
@@ -263,10 +286,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 // Add Amount to Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 class AddAmountToGoalSheet extends StatefulWidget {
-  const AddAmountToGoalSheet({
-    super.key,
-    required this.goal,
-  });
+  const AddAmountToGoalSheet({super.key, required this.goal});
 
   /// The goal to contribute to. The full model is needed so the repo can
   /// issue a proper update call.
@@ -332,7 +352,7 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
     }
 
     // ── Parse numeric goal ID from composite string e.g. "42_S" → 42 ────────
-    final idParts      = widget.goal.id.split('_');
+    final idParts = widget.goal.id.split('_');
     final numericGoalId = int.tryParse(idParts.first);
     if (numericGoalId == null) {
       if (!mounted) return;
@@ -347,10 +367,10 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
     setState(() => _submitting = true);
     try {
-      final repo                = GoalRepository();
+      final repo = GoalRepository();
       final goalTransactionRepo = GoalTrasectionRepository();
-      final provider            = FinanceProvider();
-      final now                 = DateTime.now();
+      final provider = FinanceProvider();
+      final now = DateTime.now();
 
       // Capture completion state BEFORE the update
       final wasComplete = widget.goal.isCompleted;
@@ -404,10 +424,10 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tc          = ThemeColors.of(context);
+    final tc = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final remaining   = widget.goal.remaining;
-    final progress    = widget.goal.progress;
+    final remaining = widget.goal.remaining;
+    final progress = widget.goal.progress;
 
     return Container(
       decoration: BoxDecoration(
@@ -421,16 +441,22 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                  color: tc.text20, borderRadius: BorderRadius.circular(4)),
+                color: tc.text20,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
           const SizedBox(height: 20),
           Text(
             'Add to "${widget.goal.name}"',
             style: TextStyle(
-                color: tc.text100, fontSize: 20, fontWeight: FontWeight.w700),
+              color: tc.text100,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -492,11 +518,12 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
           _Label('Amount to Add (Rs.)', tc),
           const SizedBox(height: 6),
           _Field(
-              controller: _amountCtrl,
-              hint: '0.00',
-              icon: Icons.currency_rupee_rounded,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              tc: tc),
+            controller: _amountCtrl,
+            hint: '0.00',
+            icon: Icons.currency_rupee_rounded,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            tc: tc,
+          ),
           const SizedBox(height: 24),
 
           SizedBox(
@@ -510,7 +537,8 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
                 disabledBackgroundColor: tc.lime.withValues(alpha: 0.5),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: _submitting
                   ? SizedBox(
@@ -521,9 +549,13 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
                         color: tc.background,
                       ),
                     )
-                  : const Text('Add Amount',
+                  : const Text(
+                      'Add Amount',
                       style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -549,46 +581,43 @@ class _TypeBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.all(4),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: selected
-                  ? color.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: selected
-                  ? Border.all(color: color.withValues(alpha: 0.4))
-                  : null,
-            ),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon,
-                      color: selected
-                          ? color
-                          : ThemeColors.of(context).text40,
-                      size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                        color: selected
-                            ? color
-                            : ThemeColors.of(context).text40,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14),
-                  ),
-                ],
+    child: GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: selected
+              ? Border.all(color: color.withValues(alpha: 0.4))
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: selected ? color : ThemeColors.of(context).text40,
+                size: 16,
               ),
-            ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? color : ThemeColors.of(context).text40,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ── Shared field ──────────────────────────────────────────────────────────────
@@ -608,32 +637,34 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: tc.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: tc.border),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Row(children: [
-          Icon(icon, color: tc.text40, size: 18),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              style: TextStyle(color: tc.text100, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(color: tc.text40, fontSize: 14),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+    height: 50,
+    decoration: BoxDecoration(
+      color: tc.surface2,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: tc.border),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    child: Row(
+      children: [
+        Icon(icon, color: tc.text40, size: 18),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: TextStyle(color: tc.text100, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: tc.text40, fontSize: 14),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
             ),
           ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }
 
 // ── Label ─────────────────────────────────────────────────────────────────────
@@ -643,11 +674,12 @@ class _Label extends StatelessWidget {
   final ThemeColors tc;
   @override
   Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
-        style: TextStyle(
-            color: tc.text40,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8),
-      );
+    text.toUpperCase(),
+    style: TextStyle(
+      color: tc.text40,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.8,
+    ),
+  );
 }
