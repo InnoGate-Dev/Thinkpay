@@ -175,56 +175,6 @@ class _SetGoalPageState extends State<SetGoalPage>
                           ],
                         ),
                       ),
-                      // Refresh button
-                      IconButton(
-                        onPressed: _isLoading ? null : _loadGoals,
-                        icon: _isLoading
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: tc.coreAction,
-                                ),
-                              )
-                            : Icon(Icons.refresh_rounded,
-                                color: tc.text40, size: 20),
-                      ),
-                      // Completed badge
-                      if (completed.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tc.coreActionDim,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: tc.limeBorder,
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_rounded,
-                                color: tc.coreAction,
-                                size: 13,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${completed.length} done',
-                                style: GoogleFonts.inter(
-                                  color: tc.coreAction,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -397,7 +347,7 @@ class _GoalOverviewTabState extends State<_GoalOverviewTab> {
     final spotlightGoals = List<GoalModel>.from(inProgress)
       ..sort((a, b) => b.progress.compareTo(a.progress));
     final topGoals = spotlightGoals.take(3).toList();
-    
+
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
@@ -555,20 +505,6 @@ class _GoalOverviewTabState extends State<_GoalOverviewTab> {
           ],
         ),
         const SizedBox(height: 20),
-
-        // ── Category split bar ──────────────────────────────────────────
-        if (totalTarget > 0) ...[
-          _SectionTitle(tc: tc, title: 'Target Breakdown'),
-          const SizedBox(height: 12),
-          _CategorySplitBar(
-            tc: tc,
-            savingsTarget: savingsTarget,
-            investTarget: investTarget,
-            totalTarget: totalTarget,
-          ),
-          const SizedBox(height: 20),
-        ],
-
         // ── Top goals spotlight ─────────────────────────────────────────
         if (topGoals.isNotEmpty) ...[
           _SectionTitle(tc: tc, title: 'Closest to Goal'),
