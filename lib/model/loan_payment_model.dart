@@ -20,12 +20,23 @@ class LoanPaymentModel {
 
   factory LoanPaymentModel.fromJson(Map<String, dynamic> json) {
     return LoanPaymentModel(
-      id: (json['id'] as num?)?.toInt() ?? 0,
-      loanId: (json['loan_id'] as num?)?.toInt() ?? (json['loanId'] as num?)?.toInt() ?? 0,
-      amount: double.tryParse(json['amount'].toString()) ?? 0,
+      id: _parseInt(json['id']),
+      loanId: _parseInt(json['loan_id']) != 0
+          ? _parseInt(json['loan_id'])
+          : _parseInt(json['loanId']),
+      amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
       paidAt: DateTime.tryParse(json['payment_date'] as String? ?? json['paid_at'] as String? ?? '') ?? DateTime.now(),
       note: json['note'] as String?,
     );
+  }
+
+  static int _parseInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    if (v is Map) return _parseInt(v['id'] ?? v['ID']);
+    return 0;
   }
 
   Map<String, dynamic> toCreateJson() {

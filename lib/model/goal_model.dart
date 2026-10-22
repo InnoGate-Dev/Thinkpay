@@ -43,7 +43,8 @@ class GoalModel {
   final String name;
   final GoalType type;
   final double targetAmount;
-  double savedAmount;
+  final double savedAmount;
+  final double expectedMonthlySpend;
   final DateTime createdAt;
 
   GoalModel({
@@ -52,6 +53,7 @@ class GoalModel {
     required this.type,
     required this.targetAmount,
     required this.savedAmount,
+    this.expectedMonthlySpend = 0.0,
     required this.createdAt,
   });
 
@@ -121,6 +123,9 @@ class GoalModel {
                   ?.toString() ??
                   '0') ??
           0,
+      expectedMonthlySpend: double.tryParse(
+              json['expected_monthly_spend']?.toString() ?? '0') ??
+          0,
       createdAt: json['created_at'] != null
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
@@ -131,7 +136,7 @@ class GoalModel {
   ///
   /// Maps to `CreateGoalRequest` / `UpdateGoalRequest`:
   /// ```json
-  /// { "name", "actual_amount", "target_amount", "is_complete", "type" }
+  /// { "name", "actual_amount", "target_amount", "expected_monthly_spend", "is_complete", "type" }
   /// ```
   Map<String, dynamic> toJson() {
     return {
@@ -139,6 +144,7 @@ class GoalModel {
       'type': type.apiValue,
       'actual_amount': savedAmount.toStringAsFixed(2),
       'target_amount': targetAmount.toStringAsFixed(2),
+      'expected_monthly_spend': expectedMonthlySpend.toStringAsFixed(2),
       'is_complete': isCompleted,
     };
   }
@@ -149,6 +155,7 @@ class GoalModel {
     GoalType? type,
     double? targetAmount,
     double? savedAmount,
+    double? expectedMonthlySpend,
     DateTime? createdAt,
   }) {
     return GoalModel(
@@ -157,6 +164,7 @@ class GoalModel {
       type: type ?? this.type,
       targetAmount: targetAmount ?? this.targetAmount,
       savedAmount: savedAmount ?? this.savedAmount,
+      expectedMonthlySpend: expectedMonthlySpend ?? this.expectedMonthlySpend,
       createdAt: createdAt ?? this.createdAt,
     );
   }

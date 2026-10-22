@@ -110,14 +110,14 @@ class Category {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: _parseInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
       type: CategoryType.fromApi(json['type']?.toString() ?? 'EXPENSE'),
       actualAmount:
           double.tryParse(json['actual_amount']?.toString() ?? '0') ?? 0.0,
       expectedAmount:
           double.tryParse(json['expected_amount']?.toString() ?? '0') ?? 0.0,
-      userId: (json['user_id'] as num?)?.toInt(),
+      userId: _parseInt(json['user_id']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -125,6 +125,15 @@ class Category {
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
+  }
+
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    if (v is Map) return _parseInt(v['id'] ?? v['ID']);
+    return null;
   }
 
   Map<String, dynamic> toJson() {

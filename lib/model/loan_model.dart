@@ -68,12 +68,12 @@ class LoanModel {
   /// `{ "Time": ..., "Valid": bool }` (Go's sql.NullString / sql.NullTime).
   factory LoanModel.fromJson(Map<String, dynamic> json) {
     return LoanModel(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
+      id: _parseInt(json['id']),
+      userId: _parseInt(json['user_id']),
       purpose: _nullString(json['purpose']) ?? 'Loan',
       amount: _parseDouble(json['amount']),
       interestRate: _parseDouble(json['interest_rate']),
-      loanDurationMonths: json['loan_duration'] as int,
+      loanDurationMonths: _parseInt(json['loan_duration']),
       monthlyPayment: _parseDouble(json['loan_month_payment']),
       startDate: _nullTime(json['sdate']) ?? DateTime.now(),
       status: LoanStatusX.fromApi(_nullString(json['loanstatus']) ?? 'ACTIVE'),
@@ -172,6 +172,15 @@ class LoanModel {
     if (v == null) return 0;
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  static int _parseInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    if (v is Map) return _parseInt(v['id'] ?? v['ID']);
     return 0;
   }
 }

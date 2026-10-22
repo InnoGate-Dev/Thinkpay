@@ -89,7 +89,7 @@ class _SetGoalPageState extends State<SetGoalPage>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddGoalSheet(initialType: defaultType),
-    );
+    ).then((_) => _loadGoals());
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -280,25 +280,24 @@ class _SetGoalPageState extends State<SetGoalPage>
                             // ── Overview tab: dashboard summary ────────────
                             _GoalOverviewTab(
                               tc: tc,
-                              displayGoals: displayGoals,
-                              savings: savings,
-                              investments: investments,
-                              completed: completed,
-                              totalTarget: totalTarget,
-                              totalSaved: totalSaved,
-                              overallPct: overallPct,
+                              provider: _provider,
+                              onRefresh: _loadGoals,
                             ),
                             _GoalList(
-                              goals: savings,
                               tc: tc,
                               emptyLabel: 'No savings goals',
                               onDelete: _deleteGoal,
+                              provider: _provider,
+                              filterType: GoalType.savings,
+                              onRefresh: _loadGoals,
                             ),
                             _GoalList(
-                              goals: investments,
                               tc: tc,
                               emptyLabel: 'No investment goals',
                               onDelete: _deleteGoal,
+                              provider: _provider,
+                              filterType: GoalType.investment,
+                              onRefresh: _loadGoals,
                             ),
                           ],
                         ),
@@ -313,26 +312,23 @@ class _SetGoalPageState extends State<SetGoalPage>
 }
 
 // ── Overview dashboard tab ────────────────────────────────────────────────────
-class _GoalOverviewTab extends StatelessWidget {
+class _GoalOverviewTab extends StatefulWidget {
   const _GoalOverviewTab({
     required this.tc,
-    required this.displayGoals,
-    required this.savings,
-    required this.investments,
-    required this.completed,
-    required this.totalTarget,
-    required this.totalSaved,
-    required this.overallPct,
+    required this.provider,
+    required this.onRefresh,
   });
 
   final ThemeColors tc;
-  final List<GoalModel> displayGoals;
-  final List<GoalModel> savings;
-  final List<GoalModel> investments;
-  final List<GoalModel> completed;
-  final double totalTarget;
-  final double totalSaved;
-  final double overallPct;
+  final FinanceProvider provider;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_GoalOverviewTab> createState() => _GoalOverviewTabState();
+}
+
+class _GoalOverviewTabState extends State<_GoalOverviewTab> {
+  ThemeColors get tc => widget.tc;
 
   String _fmt(double v) {
     if (v >= 1e6) return 'Rs. ${(v / 1e6).toStringAsFixed(1)}M';
@@ -342,6 +338,29 @@ class _GoalOverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.provider,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final allGoals = widget.provider.goals;
+    final displayGoals = allGoals.where((g) {
+      final cleanId = g.id.trim().toUpperCase();
+      return g.type != GoalType.debt && !cleanId.endsWith('_L');
+    }).toList();
+    final savings = displayGoals
+        .where((g) => g.type == GoalType.savings || g.id.trim().toUpperCase().endsWith('_S'))
+        .toList();
+    final investments = displayGoals
+        .where((g) => g.type == GoalType.investment || g.id.trim().toUpperCase().endsWith('_I'))
+        .toList();
+    final completed = displayGoals.where((g) => g.isCompleted).toList();
+    final totalTarget = displayGoals.fold(0.0, (s, g) => s + g.targetAmount);
+    final totalSaved  = displayGoals.fold(0.0, (s, g) => s + g.savedAmount);
+    final overallPct  = totalTarget > 0 ? (totalSaved / totalTarget) : 0.0;
+
     if (displayGoals.isEmpty) {
       return Center(
         child: Column(
@@ -378,6 +397,7 @@ class _GoalOverviewTab extends StatelessWidget {
     final spotlightGoals = List<GoalModel>.from(inProgress)
       ..sort((a, b) => b.progress.compareTo(a.progress));
     final topGoals = spotlightGoals.take(3).toList();
+    
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
@@ -554,7 +574,11 @@ class _GoalOverviewTab extends StatelessWidget {
           _SectionTitle(tc: tc, title: 'Closest to Goal'),
           const SizedBox(height: 12),
           ...topGoals.map(
-            (g) => _SpotlightGoalRow(goal: g, tc: tc),
+            (g) => _SpotlightGoalRow(
+              goal: g,
+              tc: tc,
+              onRefresh: widget.onRefresh,
+            ),
           ),
         ],
 
@@ -888,76 +912,119 @@ class _LegendDot extends StatelessWidget {
 
 // ── Spotlight goal row ────────────────────────────────────────────────────────
 class _SpotlightGoalRow extends StatelessWidget {
-  const _SpotlightGoalRow({required this.goal, required this.tc});
+  const _SpotlightGoalRow({
+    required this.goal,
+    required this.tc,
+    required this.onRefresh,
+  });
   final GoalModel goal;
   final ThemeColors tc;
+  final Future<void> Function() onRefresh;
 
   Color get _accent =>
       goal.type == GoalType.savings ? tc.coreAction : const Color(0xFF7C86F5);
+
+  void _openAddAmount(BuildContext context) {
+    if (goal.isCompleted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddAmountToGoalSheet(goal: goal),
+    ).then((_) => onRefresh());
+  }
 
   @override
   Widget build(BuildContext context) {
     final pct = (goal.progress * 100).toStringAsFixed(0);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: tc.surface,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: tc.border, width: 0.8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        onTap: goal.isCompleted ? null : () => _openAddAmount(context),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: tc.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: tc.border, width: 0.8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  goal.name,
-                  style: GoogleFonts.inter(
-                    color: tc.text100,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      goal.name,
+                      style: GoogleFonts.inter(
+                        color: tc.text100,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 8),
+                  if (!goal.isCompleted) ...[
+                    Icon(Icons.add_circle_outline_rounded,
+                        color: _accent, size: 15),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    '$pct%',
+                    style: GoogleFonts.manrope(
+                      color: _accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey('spotlight_${goal.id}_${goal.savedAmount}'),
+                  tween: Tween(begin: 0, end: goal.progress),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, val, _) => LinearProgressIndicator(
+                    value: val,
+                    minHeight: 5,
+                    backgroundColor: tc.text10,
+                    valueColor: AlwaysStoppedAnimation(_accent),
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '$pct%',
-                style: GoogleFonts.manrope(
-                  color: _accent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Rs. ${goal.savedAmount.toStringAsFixed(0)} of Rs. ${goal.targetAmount.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      color: tc.text40,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (!goal.isCompleted)
+                    Text(
+                      'Tap to add',
+                      style: GoogleFonts.inter(
+                        color: _accent.withValues(alpha: 0.7),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: goal.progress),
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.easeOutCubic,
-              builder: (_, val, _) => LinearProgressIndicator(
-                value: val,
-                minHeight: 5,
-                backgroundColor: tc.text10,
-                valueColor: AlwaysStoppedAnimation(_accent),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Rs. ${goal.savedAmount.toStringAsFixed(0)} of Rs. ${goal.targetAmount.toStringAsFixed(0)}',
-            style: GoogleFonts.inter(
-              color: tc.text40,
-              fontSize: 11,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1142,46 +1209,73 @@ class _GoalTabBar extends StatelessWidget {
 }
 
 // ── Goal list ─────────────────────────────────────────────────────────────────
-class _GoalList extends StatelessWidget {
+class _GoalList extends StatefulWidget {
   const _GoalList({
-    required this.goals,
     required this.tc,
     required this.emptyLabel,
     required this.onDelete,
+    required this.provider,
+    required this.filterType,
+    required this.onRefresh,
   });
-  final List<GoalModel> goals;
   final ThemeColors tc;
   final String emptyLabel;
   final Future<void> Function(GoalModel) onDelete;
+  final FinanceProvider provider;
+  final GoalType filterType;
+  final Future<void> Function() onRefresh;
 
   @override
-  Widget build(BuildContext context) {
-    if (goals.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.flag_outlined, color: tc.text20, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              emptyLabel,
-              style: GoogleFonts.inter(color: tc.text40, fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Tap + New Goal to get started',
-              style: GoogleFonts.inter(color: tc.text20, fontSize: 12),
-            ),
-          ],
-        ),
-      );
-    }
+  State<_GoalList> createState() => _GoalListState();
+}
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-      itemCount: goals.length,
-      itemBuilder: (_, i) =>
-          _GoalCard(goal: goals[i], tc: tc, onDelete: onDelete),
+class _GoalListState extends State<_GoalList> {
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.provider,
+      builder: (context, _) {
+        final allGoals = widget.provider.goals;
+        final displayGoals = allGoals.where((g) {
+          final cleanId = g.id.trim().toUpperCase();
+          return g.type != GoalType.debt && !cleanId.endsWith('_L');
+        }).toList();
+        final goals = displayGoals
+            .where((g) => g.type == widget.filterType)
+            .toList();
+
+        if (goals.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.flag_outlined, color: widget.tc.text20, size: 48),
+                const SizedBox(height: 12),
+                Text(
+                  widget.emptyLabel,
+                  style: GoogleFonts.inter(color: widget.tc.text40, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap + New Goal to get started',
+                  style: GoogleFonts.inter(color: widget.tc.text20, fontSize: 12),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
+          itemCount: goals.length,
+          itemBuilder: (_, i) => _GoalCard(
+            goal: goals[i],
+            tc: widget.tc,
+            onDelete: widget.onDelete,
+            onRefresh: widget.onRefresh,
+          ),
+        );
+      },
     );
   }
 }
@@ -1192,10 +1286,12 @@ class _GoalCard extends StatelessWidget {
     required this.goal,
     required this.tc,
     required this.onDelete,
+    required this.onRefresh,
   });
   final GoalModel goal;
   final ThemeColors tc;
   final Future<void> Function(GoalModel) onDelete;
+  final Future<void> Function() onRefresh;
 
   Color get _accentColor =>
       goal.type == GoalType.savings ? tc.coreAction : const Color(0xFF7C86F5);
@@ -1215,9 +1311,8 @@ class _GoalCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          AddAmountToGoalSheet(goal: goal),
-    );
+      builder: (_) => AddAmountToGoalSheet(goal: goal),
+    ).then((_) => onRefresh());
   }
 
   void _showDeleteDialog(BuildContext context) {
@@ -1263,7 +1358,7 @@ class _GoalCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddGoalSheet(existing: goal),
-    );
+    ).then((_) => onRefresh());
   }
 
   @override
@@ -1454,6 +1549,7 @@ class _GoalCard extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: TweenAnimationBuilder<double>(
+                          key: ValueKey('card_${goal.id}_${goal.savedAmount}'),
                           tween: Tween(begin: 0, end: goal.progress),
                           duration: const Duration(milliseconds: 800),
                           curve: Curves.easeOutCubic,

@@ -24,7 +24,7 @@ class AddGoalSheet extends StatefulWidget {
 class _AddGoalSheetState extends State<AddGoalSheet> {
   final _nameCtrl = TextEditingController();
   final _targetAmountCtrl = TextEditingController();
-  final _actualAmountCtrl = TextEditingController();
+  final _expectSpentAmountCtrl = TextEditingController();
   late GoalType _type;
   bool _submitting = false;
 
@@ -36,11 +36,11 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
     if (_isEditing) {
       _nameCtrl.text = widget.existing!.name;
       _targetAmountCtrl.text = widget.existing!.targetAmount.toStringAsFixed(2);
-      _actualAmountCtrl.text = widget.existing!.savedAmount.toStringAsFixed(2);
+      _expectSpentAmountCtrl.text = widget.existing!.expectedMonthlySpend.toStringAsFixed(2);
       _type = widget.existing!.type;
     } else {
       _type = widget.initialType ?? GoalType.savings;
-      _actualAmountCtrl.text = '0.00';
+      _expectSpentAmountCtrl.text = '0.00';
     }
   }
 
@@ -48,7 +48,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _targetAmountCtrl.dispose();
-    _actualAmountCtrl.dispose();
+    _expectSpentAmountCtrl.dispose();
     super.dispose();
   }
 
@@ -57,8 +57,8 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
     final targetAmount = double.tryParse(
       _targetAmountCtrl.text.replaceAll(',', ''),
     );
-    final actualAmount =
-        double.tryParse(_actualAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
+    final expectedMonthPayment =
+        double.tryParse(_expectSpentAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
 
     if (name.isEmpty || targetAmount == null || targetAmount <= 0) {
       if (!mounted) return;
@@ -73,7 +73,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
       return;
     }
 
-    if (actualAmount < 0) {
+    if (expectedMonthPayment < 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -84,7 +84,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
       return;
     }
 
-    final isComplete = actualAmount >= targetAmount && targetAmount > 0;
+    final isComplete =  expectedMonthPayment >= targetAmount && targetAmount > 0;
 
     setState(() => _submitting = true);
     try {
@@ -95,10 +95,9 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
         // ── Edit existing goal ────────────────────────────────────────────
         final updated = await repo.updateGoal(
           widget.existing!.id,
-          widget.existing!,
+          widget.existing!.copyWith(expectedMonthlySpend: expectedMonthPayment),
           name: name,
           targetAmount: targetAmount,
-          actualAmount: actualAmount,
           type: _type,
         );
         provider.updateGoal(updated, preserveSaved: false);
@@ -107,7 +106,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
         final created = await repo.createGoal(
           name: name,
           targetAmount: targetAmount,
-          actualAmount: actualAmount,
+          expectedMonthlySpend: expectedMonthPayment,
           isComplete: isComplete,
           type: _type,
         );
@@ -220,7 +219,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             _Label('Expected Monthly Spent Amount', tc),
             const SizedBox(height: 6),
             _Field(
-              controller: _actualAmountCtrl,
+              controller: _expectSpentAmountCtrl,
               hint: '500.00',
               icon: Icons.account_balance_wallet_rounded,
               keyboardType: const TextInputType.numberWithOptions(
@@ -388,25 +387,13 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
         amount: amount,
         transactionDateTime: now,
       );
-      print("====");
-      print(addtotrasection);
       // Sync provider with the backend response
       provider.addAmountToGoal(widget.goal.id, updated.savedAmount);
 
       if (!mounted) return;
 
       // Show completion snackbar ONLY when the goal JUST became complete
-      // (was not complete before, is complete now)
-      final justCompleted = !wasComplete && updated.isCompleted;
-      if (justCompleted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 Goal "${widget.goal.name}" is now complete!'),
-            backgroundColor: ThemeColors.of(context).lime,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      // (was not complete before, is complete now
 
       Navigator.pop(context);
     } catch (e) {

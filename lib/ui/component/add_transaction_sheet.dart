@@ -1,11 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constant/app_colors.dart';
+import '../../core/repository/categoryRepo.dart';
+import '../../core/repository/goalRepo.dart';
+import '../../core/repository/goalTrasection.dart';
+import '../../core/repository/loanRepo.dart';
+import '../../core/repository/trasectionRepo.dart';
+import '../../model/budget_model.dart';
+import '../../model/goal_model.dart';
+import '../../model/loan_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
+// ── Transfer destination discriminator ────────────────────────────────────────
+/// Describes what the user is transferring funds to in the Transfer tab.
+enum _TransferDest { goal, loan }
+
+class _TransferTarget {
+  const _TransferTarget.goal(this.goal)
+      : type = _TransferDest.goal,
+        loan = null;
+  const _TransferTarget.loan(this.loan)
+      : type = _TransferDest.loan,
+        goal = null;
+
+  final _TransferDest type;
+  final GoalModel? goal;
+  final LoanModel? loan;
+
+  String get label => type == _TransferDest.goal ? goal!.name : loan!.purpose;
+}
+
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  const AddTransactionSheet({super.key, this.initialType});
+
+  /// Optionally pre-select a transaction type (Expense / Income / Transfer).
+  final TransactionType? initialType;
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -15,9 +45,45 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _amountCtrl = TextEditingController();
   final _noteCtrl   = TextEditingController();
 
-  TransactionType _type = TransactionType.expense;
+  late TransactionType _type;
   String?         _category;
   DateTime        _date = DateTime.now();
+
+  // ── Transfer-specific state ────────────────────────────────────────────────
+  bool _loadingTransferTargets = false;
+  List<GoalModel> _goals = [];
+  List<LoanModel> _loans = [];
+  _TransferTarget? _selectedTarget;
+
+  bool _submitting = false;
+
+  final _transactionRepo = TransactionRepository();
+  final _categoryRepo = CategoryRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType ?? TransactionType.expense;
+    if (FinanceProvider().budgets.isEmpty) {
+      _fetchCategories();
+    }
+    if (_type == TransactionType.transferOut ||
+        _type == TransactionType.transferIn) {
+      _fetchTransferTargets();
+    }
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final categories = await _categoryRepo.getCategories();
+      if (mounted) {
+        FinanceProvider().setBudgetCategories(
+          categories.map((c) => c.toBudgetCategory()).toList(),
+        );
+        setState(() {});
+      }
+    } catch (_) {}
+  }
 
   /// Categories are sourced exclusively from budget entries.
   List<String> get _categories {
@@ -25,6 +91,27 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       return FinanceProvider().incomeBudgetCategories;
     }
     return FinanceProvider().expenseBudgetCategories;
+  }
+
+  /// Fetches goals and loans for the Transfer destination picker.
+  Future<void> _fetchTransferTargets() async {
+    setState(() => _loadingTransferTargets = true);
+    try {
+      final results = await Future.wait([
+        GoalRepository().getGoals(),
+        LoanRepository().getLoans(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _goals = results[0] as List<GoalModel>;
+          _loans = results[1] as List<LoanModel>;
+        });
+      }
+    } catch (_) {
+      // Silently fail; user will see empty list.
+    } finally {
+      if (mounted) setState(() => _loadingTransferTargets = false);
+    }
   }
 
   @override
@@ -83,31 +170,154 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     if (picked != null && mounted) setState(() => _date = picked);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
 
-    if (amount == null || amount <= 0 || _category == null) {
+    if (amount == null || amount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please fill all required fields.'),
+          content: const Text('Please enter a valid amount.'),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
       return;
     }
 
-    FinanceProvider().addTransaction(TransactionModel(
-      id:       FinanceProvider().newId().toString(),
-      category: _category!,
-      amount:   amount,
-      type:     _type,
-      date:     _date,
-      notes:    _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-    ));
+    // ── Transfer tab: route to goal or loan transaction table ────────────────
+    if (_type == TransactionType.transferOut ||
+        _type == TransactionType.transferIn) {
+      if (_selectedTarget == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please select a Goal or Loan to transfer to.'),
+            backgroundColor: ThemeColors.of(context).red,
+          ),
+        );
+        return;
+      }
+      await _submitTransfer(amount);
+      return;
+    }
 
-    if (mounted) Navigator.pop(context);
+    // ── Income / Expense tab ─────────────────────────────────────────────────
+    if (_category == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select a category.'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+      return;
+    }
+
+    final budgets = FinanceProvider().budgets;
+    final matchingCategory = budgets.firstWhere(
+      (b) => b.name == _category,
+      orElse: () => BudgetCategory(
+        id: 0,
+        name: _category!,
+        expectedAmount: 0,
+        type: _type,
+      ),
+    );
+
+    setState(() => _submitting = true);
+
+    try {
+      final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
+      final createdApiTx = await _transactionRepo.createTransaction(
+        categoryId: matchingCategory.id,
+        type: _type,
+        amount: amount,
+        date: _date,
+        notes: note,
+      );
+
+      FinanceProvider().addTransaction(
+        createdApiTx.toLocalModel(fallbackCategory: _category),
+      );
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add transaction: $e'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
+
+  /// Routes a transfer to the correct backend table:
+  /// - Goal → goal transaction table (via [GoalTrasectionRepository])
+  /// - Loan → loan payment table (via [LoanRepository])
+  Future<void> _submitTransfer(double amount) async {
+    final target = _selectedTarget!;
+    setState(() => _submitting = true);
+    try {
+      if (target.type == _TransferDest.goal) {
+        final goal = target.goal!;
+        final idParts = goal.id.split('_');
+        final numericGoalId = int.tryParse(idParts.first);
+        if (numericGoalId == null) throw Exception('Invalid goal ID: ${goal.id}');
+
+        // 1. Record goal transaction
+        await GoalTrasectionRepository().createGoalTrasection(
+          goalId: numericGoalId,
+          amount: amount,
+          transactionDateTime: _date,
+        );
+        // 2. Update goal's saved amount
+        final updatedGoal = await GoalRepository().addAmountToGoal(
+          goal.id,
+          amount,
+          goal,
+        );
+        FinanceProvider().addAmountToGoal(goal.id, updatedGoal.savedAmount);
+      } else {
+        final loan = target.loan!;
+        // Record loan payment
+        await LoanRepository().addLoanPayment(
+          loanId: loan.id,
+          amount: amount,
+          paidAt: _date,
+          note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        );
+      }
+
+      // Add a local TransactionModel so it shows in the transactions page immediately.
+      FinanceProvider().addTransaction(TransactionModel(
+        id:       FinanceProvider().newId().toString(),
+        category: target.label,
+        amount:   amount,
+        type:     TransactionType.transferOut,
+        date:     _date,
+        notes:    _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      ));
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Transfer failed: $e'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  bool get _isTransfer =>
+      _type == TransactionType.transferOut ||
+      _type == TransactionType.transferIn;
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +368,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             ),
             const SizedBox(height: 20),
 
-            // ── Type Toggle
+            // ── Type Toggle (3 buttons: Expense | Income | Transfer)
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -175,6 +385,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     onTap: () => setState(() {
                       _type = TransactionType.expense;
                       _category = null;
+                      _selectedTarget = null;
                     }),
                   ),
                   _TypeBtn(
@@ -185,7 +396,24 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     onTap: () => setState(() {
                       _type = TransactionType.income;
                       _category = null;
+                      _selectedTarget = null;
                     }),
+                  ),
+                  _TypeBtn(
+                    label: 'Transfer',
+                    icon: Icons.swap_horiz_rounded,
+                    selected: _isTransfer,
+                    color: tc.intelligenceAccent,
+                    onTap: () {
+                      setState(() {
+                        _type = TransactionType.transferOut;
+                        _category = null;
+                        _selectedTarget = null;
+                      });
+                      if (_goals.isEmpty && _loans.isEmpty) {
+                        _fetchTransferTargets();
+                      }
+                    },
                   ),
                 ],
               ),
@@ -202,55 +430,70 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             ),
 
             const SizedBox(height: 16),
-            // ── Category (from Budget section)
-            _Label('Category', tc),
-            const SizedBox(height: 8),
-            if (!hasCategories) ...[
-              Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: tc.surface2,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: accentColor.withValues(alpha: 0.35)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(children: [
-                  Icon(Icons.info_outline_rounded,
-                      color: accentColor, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'No categories — add one in the Budget section first.',
-                      style: AppTypography.bodySm.copyWith(color: tc.text40),
-                    ),
-                  ),
-                ]),
+
+            // ── Category picker (Expense / Income) or Transfer destination ───
+            if (_isTransfer) ...[
+              _Label('Transfer To (Goal or Loan)', tc),
+              const SizedBox(height: 8),
+              _TransferTargetPicker(
+                goals: _goals,
+                loans: _loans,
+                selected: _selectedTarget,
+                loading: _loadingTransferTargets,
+                accentColor: accentColor,
+                tc: tc,
+                onChanged: (t) => setState(() => _selectedTarget = t),
               ),
             ] else ...[
-              Container(
-                decoration: BoxDecoration(
-                  color: tc.surface2,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _category,
-                    hint: Text('Select category',
-                        style: AppTypography.bodySm.copyWith(color: tc.text40)),
-                    dropdownColor: tc.surface2,
-                    isExpanded: true,
-                    style: AppTypography.bodySm.copyWith(color: tc.text100),
-                    iconEnabledColor: tc.text40,
+              _Label('Category', tc),
+              const SizedBox(height: 8),
+              if (!hasCategories) ...[
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: tc.surface2,
                     borderRadius: BorderRadius.circular(14),
-                    items: cats
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _category = v),
+                    border: Border.all(
+                        color: accentColor.withValues(alpha: 0.35)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    Icon(Icons.info_outline_rounded,
+                        color: accentColor, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'No categories — add one in the Budget section first.',
+                        style: AppTypography.bodySm.copyWith(color: tc.text40),
+                      ),
+                    ),
+                  ]),
+                ),
+              ] else ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: tc.surface2,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _category,
+                      hint: Text('Select category',
+                          style: AppTypography.bodySm.copyWith(color: tc.text40)),
+                      dropdownColor: tc.surface2,
+                      isExpanded: true,
+                      style: AppTypography.bodySm.copyWith(color: tc.text100),
+                      iconEnabledColor: tc.text40,
+                      borderRadius: BorderRadius.circular(14),
+                      items: cats
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _category = v),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
             const SizedBox(height: 16),
 
@@ -326,7 +569,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: hasCategories ? _submit : null,
+                onPressed: (_submitting || (!_isTransfer && !hasCategories))
+                    ? null
+                    : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accentColor,
                   foregroundColor: tc.background,
@@ -336,19 +581,176 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: Text(
-                  hasCategories
-                      ? 'Add Transaction'
-                      : 'Add a Budget Category First',
-                  style: AppTypography.bodySm.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: _submitting
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: tc.background,
+                        ),
+                      )
+                    : Text(
+                        !_isTransfer && !hasCategories
+                            ? 'Add a Budget Category First'
+                            : 'Add Transaction',
+                        style: AppTypography.bodySm.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 4),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Transfer target picker ─────────────────────────────────────────────────────
+/// Shows a scrollable list of goals and loans for the user to pick from.
+class _TransferTargetPicker extends StatelessWidget {
+  const _TransferTargetPicker({
+    required this.goals,
+    required this.loans,
+    required this.selected,
+    required this.loading,
+    required this.accentColor,
+    required this.tc,
+    required this.onChanged,
+  });
+
+  final List<GoalModel> goals;
+  final List<LoanModel> loans;
+  final _TransferTarget? selected;
+  final bool loading;
+  final Color accentColor;
+  final ThemeColors tc;
+  final ValueChanged<_TransferTarget> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: tc.surface2,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: accentColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (goals.isEmpty && loans.isEmpty) {
+      return Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: tc.surface2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accentColor.withValues(alpha: 0.35)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(children: [
+          Icon(Icons.info_outline_rounded, color: accentColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No goals or loans found. Add one first.',
+              style: AppTypography.bodySm.copyWith(color: tc.text40),
+            ),
+          ),
+        ]),
+      );
+    }
+
+    // Build unified dropdown items from goals + loans.
+    final items = <DropdownMenuItem<_TransferTarget>>[];
+    for (final g in goals) {
+      final t = _TransferTarget.goal(g);
+      items.add(DropdownMenuItem(
+        value: t,
+        child: Row(
+          children: [
+            Icon(Icons.flag_rounded, color: tc.coreAction, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                g.name,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySm.copyWith(color: tc.text100),
+              ),
+            ),
+            Text(
+              'Goal',
+              style: AppTypography.bodySm.copyWith(
+                color: tc.coreAction,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ));
+    }
+    for (final l in loans) {
+      final t = _TransferTarget.loan(l);
+      items.add(DropdownMenuItem(
+        value: t,
+        child: Row(
+          children: [
+            Icon(Icons.account_balance_rounded,
+                color: tc.intelligenceAccent, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l.purpose,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySm.copyWith(color: tc.text100),
+              ),
+            ),
+            Text(
+              'Loan',
+              style: AppTypography.bodySm.copyWith(
+                color: tc.intelligenceAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tc.surface2,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_TransferTarget>(
+          value: selected,
+          hint: Text('Select Goal or Loan',
+              style: AppTypography.bodySm.copyWith(color: tc.text40)),
+          dropdownColor: tc.surface2,
+          isExpanded: true,
+          iconEnabledColor: tc.text40,
+          borderRadius: BorderRadius.circular(14),
+          items: items,
+          onChanged: (v) {
+            if (v != null) onChanged(v);
+          },
         ),
       ),
     );
