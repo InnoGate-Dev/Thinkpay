@@ -5,7 +5,7 @@ import '../../core/constant/app_colors.dart';
 import '../../core/repository/goalRepo.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
-
+import 'package:lottie/lottie.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // Add / Edit Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
@@ -712,22 +712,18 @@ void showGoalCompletedDialog(BuildContext context, GoalModel goal) {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Trophy Icon Badge ─────────────────────────────────────
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: tc.coreAction.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: tc.coreAction.withValues(alpha: 0.4),
-                  width: 2,
+            SizedBox(
+              width: 140,
+              height: 140,
+              child: Lottie.asset(
+                'lib/assets/animations/Thumbs up birdie.json',
+                fit: BoxFit.contain,
+                repeat: true,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.emoji_events_rounded,
+                  color: tc.coreAction,
+                  size: 60,
                 ),
-              ),
-              child: Icon(
-                Icons.emoji_events_rounded,
-                color: tc.coreAction,
-                size: 40,
               ),
             ),
             const SizedBox(height: 20),

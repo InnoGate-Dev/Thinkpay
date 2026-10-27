@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constant/app_colors.dart';
 import '../../../core/repository/notificationRepo.dart';
 import '../../../model/notification_model.dart';
-
+import 'package:lottie/lottie.dart';
 // ── Notification store (singleton) ────────────────────────────────────────────
 class NotificationStore extends ChangeNotifier {
   static final NotificationStore _i = NotificationStore._();
@@ -482,18 +482,19 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: tc.coreActionDim,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: tc.coreAction.withValues(alpha: 0.2),
+            SizedBox(
+              width: 200,
+              height: 200,
+              child: Lottie.asset(
+                'lib/assets/animations/Empty Notifications.lottie',
+                fit: BoxFit.contain,
+                repeat: true,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.emoji_events_rounded,
+                  color: tc.coreAction,
+                  size: 60,
                 ),
               ),
-              child: Icon(Icons.notifications_none_rounded,
-                  color: tc.coreAction, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
