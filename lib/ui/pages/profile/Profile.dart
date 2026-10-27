@@ -74,16 +74,6 @@ class Profile extends StatelessWidget {
                         style: TextStyle(color: tc.text40, fontSize: 12)),
                   ],
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: tc.limeDim,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: tc.limeBorder),
-                    ),
-                    child: Text('Premium Member',
-                        style: TextStyle(color: tc.lime, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
                   if (profileStore.bio.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Padding(
@@ -93,21 +83,6 @@ class Profile extends StatelessWidget {
                           style: TextStyle(color: tc.text40, fontSize: 13)),
                     ),
                   ],
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                    ),
-                    icon: Icon(Icons.edit_outlined, size: 16, color: tc.lime),
-                    label: Text('Edit Profile',
-                        style: TextStyle(color: tc.lime, fontSize: 13, fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: tc.limeBorder),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    ),
-                  ),
                 ]),
               ),
               const SizedBox(height: 28),

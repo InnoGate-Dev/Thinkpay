@@ -27,12 +27,25 @@ class _LoanListPageState extends State<LoanListPage> {
   @override
   void initState() {
     super.initState();
-    _future = widget.service.fetchLoans();
+    _future = _fetchLoansWithPayments();
+  }
+
+  Future<List<LoanModel>> _fetchLoansWithPayments() async {
+    final loans = await widget.service.fetchLoans();
+    final payments = await Future.wait(
+      loans.map((loan) => widget.service.fetchPayments(loan.id)),
+    );
+    return [
+      for (var i = 0; i < loans.length; i++)
+        loans[i].copyWith(payments: payments[i]),
+    ];
   }
 
   Future<void> _refresh() async {
-    final loans = widget.service.fetchLoans();
-    setState(() => _future = loans);
+    final loans = _fetchLoansWithPayments();
+    setState(() {
+      _future = loans;
+    });
     await loans;
   }
 

@@ -372,11 +372,16 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
       final provider = FinanceProvider();
       final now = DateTime.now();
 
-      // Capture completion state BEFORE the update
+      // Determine completion from the balance before this contribution. The
+      // API response may contain a stale completion flag, so don't use it to
+      // decide whether to show the one-time completion dialog.
       final wasComplete = widget.goal.isCompleted;
+      final reachesTarget = amount >= remaining;
+      final newSavedAmount =
+          (widget.goal.savedAmount + amount).clamp(0.0, widget.goal.targetAmount);
 
       // Update goal saved amount on the backend
-      final updated = await repo.addAmountToGoal(
+      await repo.addAmountToGoal(
         widget.goal.id,
         amount,
         widget.goal,
@@ -389,13 +394,16 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
         transactionDateTime: now,
       );
       // Sync provider with the backend response
-      provider.addAmountToGoal(widget.goal.id, updated.savedAmount);
+      provider.addAmountToGoal(widget.goal.id, newSavedAmount);
 
       if (!mounted) return;
 
-      final isJustCompleted = !wasComplete && updated.isCompleted;
+      final isJustCompleted = !wasComplete && reachesTarget;
+      final completedGoal = isJustCompleted
+          ? widget.goal.copyWith(savedAmount: widget.goal.targetAmount)
+          : null;
 
-      Navigator.pop(context, isJustCompleted ? updated : null);
+      Navigator.pop(context, completedGoal);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

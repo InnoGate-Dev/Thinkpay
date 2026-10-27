@@ -868,9 +868,9 @@ class _SpotlightGoalRow extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => AddAmountToGoalSheet(goal: goal),
     );
-    onRefresh();
-    if (goal.isCompleted) {
-      showGoalCompletedDialog(context, goal);
+    await onRefresh();
+    if (result != null && result.isCompleted && context.mounted) {
+      showGoalCompletedDialog(context, result);
     }
   }
 
