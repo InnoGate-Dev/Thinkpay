@@ -21,7 +21,7 @@ import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/startupScreen.dart';
 import 'package:Thinkpay/ui/pages/onboarding/onboarding.dart';
 import 'package:Thinkpay/ui/pages/support/support.dart';
-import 'package:Thinkpay/ui/pages/Notification.dart';
+import 'package:Thinkpay/ui/pages/Notification/Notification.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';

@@ -563,18 +563,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             ),
             const SizedBox(height: 16),
 
-            // ── Notes
-            _Label('Notes', tc),
-            const SizedBox(height: 8),
-            _StyledField(
-              controller: _noteCtrl,
-              hint: 'Add a note (optional)',
-              icon: Icons.notes_rounded,
-              tc: tc,
-              accentColor: accentColor,
-            ),
-            const SizedBox(height: 28),
-
             // ── Submit
             SizedBox(
               width: double.infinity,

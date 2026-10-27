@@ -9,6 +9,7 @@ import 'package:Thinkpay/ui/pages/home/balancecard.dart';
 import 'package:Thinkpay/ui/pages/home/community_updates.dart';
 import 'package:Thinkpay/ui/pages/home/empty_state.dart';
 import 'package:Thinkpay/ui/pages/home/transaction_list.dart';
+import 'package:Thinkpay/ui/pages/Notification/Notification.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,34 +105,41 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               Row(
                 children: [
-                  IconButton(
-                    icon: Stack(
-                      children: [
-                        Icon(
-                          Icons.notifications_outlined,
-                          color: tc.text70,
-                          size: 22,
-                        ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: tc.coreAction,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: tc.background,
-                                width: 1.2,
-                              ),
+                  ListenableBuilder(
+                    listenable: NotificationStore(),
+                    builder: (context, _) {
+                      final unreadCount = NotificationStore().unreadCount;
+                      return IconButton(
+                        icon: Stack(
+                          children: [
+                            Icon(
+                              Icons.notifications_outlined,
+                              color: tc.text70,
+                              size: 22,
                             ),
-                          ),
+                            if (unreadCount > 0)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: tc.coreAction,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: tc.background,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/notification'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/notification'),
+                      );
+                    },
                   ),
                 ],
               ),
