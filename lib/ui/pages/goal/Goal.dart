@@ -860,14 +860,18 @@ class _SpotlightGoalRow extends StatelessWidget {
   Color get _accent =>
       goal.type == GoalType.savings ? tc.coreAction : const Color(0xFF7C86F5);
 
-  void _openAddAmount(BuildContext context) {
+  void _openAddAmount(BuildContext context) async {
     if (goal.isCompleted) return;
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<GoalModel>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddAmountToGoalSheet(goal: goal),
-    ).then((_) => onRefresh());
+    );
+    onRefresh();
+    if (goal.isCompleted) {
+      showGoalCompletedDialog(context, goal);
+    }
   }
 
   @override
@@ -1241,14 +1245,18 @@ class _GoalCard extends StatelessWidget {
 
   String _fmt(double v) => 'Rs. ${v.toStringAsFixed(0)}';
 
-  void _openAddAmount(BuildContext context) {
+  void _openAddAmount(BuildContext context) async {
     if (goal.isCompleted) return;
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<GoalModel>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddAmountToGoalSheet(goal: goal),
-    ).then((_) => onRefresh());
+    );
+    onRefresh();
+    if (result != null && result.isCompleted && context.mounted) {
+      showGoalCompletedDialog(context, result);
+    }
   }
 
   void _showDeleteDialog(BuildContext context) {

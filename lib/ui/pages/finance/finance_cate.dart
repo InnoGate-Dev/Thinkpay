@@ -28,7 +28,7 @@ class _FinancePageState extends State<FinancePage>
     with SingleTickerProviderStateMixin {
   final _provider = FinanceProvider();
   final _categoryRepo = CategoryRepository();
- // final _transactionRepo = TransactionRepository();
+  final _transactionRepo = TransactionRepository();
   final _goalRepo = GoalRepository();
   final _loanRepo = LoanRepository();
   List<GoalModel> _goals = [];
@@ -61,7 +61,7 @@ class _FinancePageState extends State<FinancePage>
     try {
       final results = await Future.wait([
         _categoryRepo.getCategories(),
-       // _transactionRepo.getTransactionsAsLocalModels(),
+        _transactionRepo.getTransactionsAsLocalModels(),
         _goalRepo.getGoals(),
         _loanRepo.getLoans(),
       ]);
@@ -83,9 +83,11 @@ class _FinancePageState extends State<FinancePage>
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
+        );
+      }
       debugPrint('Failed to load financial data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);

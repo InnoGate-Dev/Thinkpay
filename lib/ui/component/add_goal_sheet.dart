@@ -1,5 +1,6 @@
 import 'package:Thinkpay/core/repository/goalTrasection.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constant/app_colors.dart';
 import '../../core/repository/goalRepo.dart';
 import 'package:Thinkpay/model/goal_model.dart';
@@ -392,10 +393,9 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
       if (!mounted) return;
 
-      // Show completion snackbar ONLY when the goal JUST became complete
-      // (was not complete before, is complete now
+      final isJustCompleted = !wasComplete && updated.isCompleted;
 
-      Navigator.pop(context);
+      Navigator.pop(context, isJustCompleted ? updated : null);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -667,6 +667,184 @@ class _Label extends StatelessWidget {
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.8,
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Goal Completed Pop-up Screen / Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+void showGoalCompletedDialog(BuildContext context, GoalModel goal) {
+  final tc = ThemeColors.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        decoration: BoxDecoration(
+          color: tc.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: tc.coreAction.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Trophy Icon Badge ─────────────────────────────────────
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: tc.coreAction.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: tc.coreAction.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.emoji_events_rounded,
+                color: tc.coreAction,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Pop-Up Title ──────────────────────────────────────────
+            Text(
+              'Goal Completed! 🎉',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                color: tc.text100,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // ── Congratulations Subtitle ──────────────────────────────
+            Text(
+              'Congratulations! You have successfully completed your goal for "${goal.name}".',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: tc.text70,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Goal Details Card ─────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: tc.surface2,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: tc.border,
+                  width: 0.8,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Saved',
+                        style: GoogleFonts.inter(
+                          color: tc.text40,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        'Rs. ${goal.savedAmount.toStringAsFixed(0)}',
+                        style: GoogleFonts.manrope(
+                          color: tc.coreAction,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: 1.0,
+                      minHeight: 8,
+                      backgroundColor: tc.text10,
+                      valueColor: AlwaysStoppedAnimation<Color>(tc.coreAction),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: tc.coreAction,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '100% Target Reached',
+                        style: GoogleFonts.inter(
+                          color: tc.coreAction,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Dismiss Button ────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tc.coreAction,
+                  foregroundColor: tc.background,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  'Awesome!',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }

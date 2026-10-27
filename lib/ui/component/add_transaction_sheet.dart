@@ -11,6 +11,7 @@ import '../../model/goal_model.dart';
 import '../../model/loan_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
+import 'add_goal_sheet.dart';
 
 // ── Transfer destination discriminator ────────────────────────────────────────
 /// Describes what the user is transferring funds to in the Transfer tab.
@@ -259,10 +260,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   /// - Loan → loan payment table (via [LoanRepository])
   Future<void> _submitTransfer(double amount) async {
     final target = _selectedTarget!;
+    GoalModel? completedGoal;
     setState(() => _submitting = true);
     try {
       if (target.type == _TransferDest.goal) {
         final goal = target.goal!;
+        final wasComplete = goal.isCompleted;
         final idParts = goal.id.split('_');
         final numericGoalId = int.tryParse(idParts.first);
         if (numericGoalId == null) throw Exception('Invalid goal ID: ${goal.id}');
@@ -280,6 +283,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           goal,
         );
         FinanceProvider().addAmountToGoal(goal.id, updatedGoal.savedAmount);
+        if (!wasComplete && updatedGoal.isCompleted) {
+          completedGoal = updatedGoal;
+        }
       } else {
         final loan = target.loan!;
         // Record loan payment
@@ -301,7 +307,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         notes:    _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       ));
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        if (completedGoal != null) {
+          showGoalCompletedDialog(context, completedGoal);
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

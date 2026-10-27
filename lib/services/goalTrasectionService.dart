@@ -6,7 +6,8 @@ class Goaltrasectionservice {
 
   Goaltrasectionservice(this._apiClient);
 
-  Future<List<dynamic>> getGoalTransactions() async {
+  Future<List<dynamic>> getGoalTransactions(
+      ) async {
     final response = await _apiClient.get(ApiEndpoints.getgoalTrasection());
     if (response is Map<String, dynamic>) {
       final data = response['data'];

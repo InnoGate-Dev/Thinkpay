@@ -131,21 +131,29 @@ class LoanModel {
 
   int get monthsElapsed {
     final now = DateTime.now();
-    var months = (now.year - startDate.year) * 12 + (now.month - startDate.month);
-    if (now.day < startDate.day) months -= 1;
+    final localStart = startDate.toLocal();
+    var months = (now.year - localStart.year) * 12 + (now.month - localStart.month);
+    if (now.day < localStart.day) months -= 1;
     return clampI(months, 0, loanDurationMonths);
   }
 
-  int get paymentsMadeCount => payments.length;
+  int get paymentsMadeCount => payments.isNotEmpty ? payments.length : monthsElapsed;
 
   int get remainingMonths => clampI(loanDurationMonths - paymentsMadeCount, 0, loanDurationMonths);
 
   double get progress => totalPayable <= 0 ? 0.0 : clampD(amountPaid / totalPayable, 0, 1);
 
-  DateTime get nextPaymentDate =>
-      DateTime(startDate.year, startDate.month + paymentsMadeCount + 1, startDate.day);
+  DateTime get nextPaymentDate => _addMonths(startDate.toLocal(), paymentsMadeCount);
 
-  int get paymentDay => startDate.day;
+  int get paymentDay => startDate.toLocal().day;
+
+  static DateTime _addMonths(DateTime date, int monthsToAdd) {
+    final targetYear = date.year + ((date.month - 1 + monthsToAdd) ~/ 12);
+    final targetMonth = ((date.month - 1 + monthsToAdd) % 12) + 1;
+    final maxDays = DateTime(targetYear, targetMonth + 1, 0).day;
+    final day = date.day > maxDays ? maxDays : date.day;
+    return DateTime(targetYear, targetMonth, day, date.hour, date.minute, date.second);
+  }
 
   static String? _nullString(dynamic field) {
     if (field == null) return null;
