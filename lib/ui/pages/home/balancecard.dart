@@ -19,12 +19,9 @@ class BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Calculate expense percentage for the visual bar
-    final double expenseRatio = income > 0 ? (expenses / income).clamp(0.0, 1.0) : 0.0;
-    
-    // A mock income growth value for the UI redesign
-    final double incomeGrowth = 14.2;
+
+    final bool isHealthy = expenses <= income;
+    final double savingsRate = income > 0 ? (((income - expenses) / income) * 100).clamp(0.0, 100.0) : 0.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -108,7 +105,47 @@ class BalanceCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // Income Growth Badge
+                          if (income > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isHealthy
+                                        ? tc.coreAction
+                                        : tc.accentExpense)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isHealthy
+                                        ? Icons.trending_up_rounded
+                                        : Icons.trending_down_rounded,
+                                    size: 12,
+                                    color: isHealthy
+                                        ? tc.coreAction
+                                        : tc.accentExpense,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isHealthy
+                                        ? 'Savings Rate: ${savingsRate.toStringAsFixed(0)}%'
+                                        : 'Expenses exceed income',
+                                    style: GoogleFonts.inter(
+                                      color: isHealthy
+                                          ? tc.coreAction
+                                          : tc.accentExpense,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
 
                         ],
                       ),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -278,14 +280,123 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _BalanceCard extends StatelessWidget {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+String _money(double v, {int decimals = 2}) {
+  final parts = v.toStringAsFixed(decimals).split('.');
+  final whole = parts[0].replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (_) => ',',
+  );
+  return decimals == 0 ? '\$$whole' : '\$$whole.${parts[1]}';
+}
+
+List<double> _lerpList(List<double> a, List<double> b, double t) => [
+  for (var i = 0; i < a.length; i++) lerpDouble(a[i], b[i], t)!,
+];
+
+// ── Balance card ─────────────────────────────────────────────────────────────
+class _BalanceCard extends StatefulWidget {
   const _BalanceCard({required this.line});
   final Animation<double> line;
 
   @override
+  State<_BalanceCard> createState() => _BalanceCardState();
+}
+
+class _BalanceCardState extends State<_BalanceCard>
+    with TickerProviderStateMixin {
+  static const _total = 12480.50;
+  static const _goalSaved = 3400.0;
+  static const _goalTarget = 5000.0;
+  static const _ranges = ['1W', '1M', '3M'];
+
+  // Same number of points per range so they can morph into each other.
+  static const _series = <List<double>>[
+    [12260, 12240, 12310, 12290, 12350, 12330, 12400, 12390, 12430, 12460, 12480.5],
+    [11977, 12060, 12010, 12150, 12110, 12240, 12200, 12330, 12290, 12420, 12480.5],
+    [10890, 11120, 11010, 11400, 11330, 11720, 11650, 12010, 11940, 12300, 12480.5],
+  ];
+
+  late final AnimationController _morph = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 550),
+    value: 1,
+  );
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
+
+  int _range = 1;
+  List<double> _from = _series[1];
+  List<double> _to = _series[1];
+  int? _scrub; // index of the point being touched
+  bool _hidden = false;
+  bool _reduceMotion = false;
+
+  List<double> get _shown =>
+      _lerpList(_from, _to, Curves.easeOutCubic.transform(_morph.value));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) {
+      _pulse.stop();
+      _pulse.value = 0;
+    } else if (!_pulse.isAnimating) {
+      _pulse.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _morph.dispose();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  void _setRange(int i) {
+    if (i == _range) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _from = _shown; // start from wherever the chart currently is
+      _to = _series[i];
+      _range = i;
+      _scrub = null;
+    });
+    if (_reduceMotion) {
+      _morph.value = 1;
+    } else {
+      _morph.forward(from: 0);
+    }
+  }
+
+  void _scrubTo(double dx, double width) {
+    if (widget.line.value < 1 || width <= 0) return; // wait for intro
+    final n = _to.length;
+    final i = (dx / width * (n - 1)).round().clamp(0, n - 1).toInt();
+    if (i != _scrub) {
+      HapticFeedback.selectionClick();
+      setState(() => _scrub = i);
+    }
+  }
+
+  void _clearScrub() {
+    if (_scrub != null) setState(() => _scrub = null);
+  }
+
+  void _toggleHidden() {
+    HapticFeedback.lightImpact();
+    setState(() => _hidden = !_hidden);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final line = widget.line;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: BoxDecoration(
         color: _C.ivory,
         borderRadius: BorderRadius.circular(28),
@@ -297,110 +408,462 @@ class _BalanceCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([line, _morph]),
+        builder: (context, _) {
+          final vals = _shown;
+          final intro = line.value;
+          final scrub = _scrub;
+
+          // Real value (for % change) vs. displayed value (count-up on intro).
+          final real = scrub != null ? vals[scrub] : _total;
+          final shownValue = scrub != null
+              ? real
+              : lerpDouble(_total * 0.9, _total, intro)!;
+          final pct = (real - vals.first) / vals.first * 100;
+          final goalT = Curves.easeOutCubic.transform(intro);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Total balance',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: _C.inkMuted,
+              // Header: label + privacy toggle + change pill
+              Row(
+                children: [
+                  Text(
+                    'Total balance',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: _C.inkMuted,
+                    ),
+                  ),
+                  Semantics(
+                    button: true,
+                    label: _hidden ? 'Show balance' : 'Hide balance',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggleHidden,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          child: Icon(
+                            _hidden
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            key: ValueKey(_hidden),
+                            size: 16,
+                            color: _C.inkMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  _DeltaPill(pct: pct),
+                ],
+              ),
+
+              // Balance (tabular figures so it doesn't jitter while scrubbing)
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: child,
+                ),
+                child: Text(
+                  _hidden ? '••••••' : _money(shownValue),
+                  key: ValueKey(_hidden),
+                  style: GoogleFonts.manrope(
+                    fontSize: 34,
+                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                    color: _C.ink,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
-              Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.mintTint,
-                  borderRadius: BorderRadius.circular(99),
+              const SizedBox(height: 8),
+
+              // Chart: drag or tap to explore values
+              SizedBox(
+                height: 64,
+                width: double.infinity,
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    final w = c.maxWidth;
+                    return Semantics(
+                      label: 'Balance trend chart. Drag to explore values.',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (d) => _scrubTo(d.localPosition.dx, w),
+                        onTapUp: (_) => _clearScrub(),
+                        onTapCancel: _clearScrub,
+                        onHorizontalDragStart: (d) =>
+                            _scrubTo(d.localPosition.dx, w),
+                        onHorizontalDragUpdate: (d) =>
+                            _scrubTo(d.localPosition.dx, w),
+                        onHorizontalDragEnd: (_) => _clearScrub(),
+                        onHorizontalDragCancel: _clearScrub,
+                        child: CustomPaint(
+                          size: Size.infinite,
+                          painter: _SparklinePainter(
+                            from: _from,
+                            to: _to,
+                            morph: _morph,
+                            intro: line,
+                            pulse: _pulse,
+                            scrub: scrub,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.trending_up_rounded,
-                        size: 14, color: _C.growth),
-                    const SizedBox(width: 4),
-                    Text(
-                      '4.2% this month',
+              ),
+              const SizedBox(height: 12),
+
+              // Range selector with a sliding thumb
+              _RangeSelector(
+                labels: _ranges,
+                index: _range,
+                onChanged: _setRange,
+              ),
+
+              const SizedBox(height: 12),
+              Container(height: 1, color: const Color(0x1A12281D)),
+              const SizedBox(height: 12),
+
+              // Goal
+              Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: _C.mintTint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.shield_outlined,
+                        size: 13, color: _C.growth),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Emergency fund',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: _C.growth,
+                        color: _C.ink,
+                      ),
+                    ),
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: _hidden
+                              ? '•••'
+                              : _money(_goalSaved * goalT, decimals: 0),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: _C.ink,
+                          ),
+                        ),
+                        if (!_hidden)
+                          TextSpan(
+                            text: ' / ${_money(_goalTarget, decimals: 0)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: _C.inkMuted,
+                            ),
+                          ),
+                      ],
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: Stack(
+                  children: [
+                    Container(height: 8, color: const Color(0xFFE4E0D3)),
+                    FractionallySizedBox(
+                      widthFactor: (_goalSaved / _goalTarget) * goalT,
+                      child: Container(
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF2E9A66), _C.growth],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Change pill (turns red if the range is negative) ─────────────────────────
+class _DeltaPill extends StatelessWidget {
+  const _DeltaPill({required this.pct});
+  final double pct;
+
+  @override
+  Widget build(BuildContext context) {
+    final up = pct >= 0;
+    final fg = up ? _C.growth : const Color(0xFFB3412E);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: up ? _C.mintTint : const Color(0xFFF7DDD6),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            up ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+            size: 14,
+            color: fg,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(width: 4),
           Text(
-            '\$12,480.50',
-            style: GoogleFonts.manrope(
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1,
-              color: _C.ink,
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 64,
-            width: double.infinity,
-            child: AnimatedBuilder(
-              animation: line,
-              builder: (_, __) => CustomPaint(
-                painter: _SparklinePainter(progress: line.value),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Emergency fund',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _C.ink,
-                ),
-              ),
-              Text(
-                '68%',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _C.inkMuted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: Stack(
-              children: [
-                Container(height: 6, color: const Color(0xFFE4E0D3)),
-                AnimatedBuilder(
-                  animation: line,
-                  builder: (_, __) => FractionallySizedBox(
-                    widthFactor: 0.68 * line.value,
-                    child: Container(height: 6, color: _C.growth),
-                  ),
-                ),
-              ],
+            '${up ? '+' : '−'}${pct.abs().toStringAsFixed(1)}%',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fg,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// ── Segmented range selector ─────────────────────────────────────────────────
+class _RangeSelector extends StatelessWidget {
+  const _RangeSelector({
+    required this.labels,
+    required this.index,
+    required this.onChanged,
+  });
+
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE9DB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment(-1 + 2 * index / (labels.length - 1), 0),
+            child: FractionallySizedBox(
+              widthFactor: 1 / labels.length,
+              heightFactor: 1,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              for (var i = 0; i < labels.length; i++)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: i == index,
+                    label: labels[i],
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onChanged(i),
+                      child: Center(
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 200),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight:
+                            i == index ? FontWeight.w700 : FontWeight.w600,
+                            color: i == index ? _C.ink : _C.inkMuted,
+                          ),
+                          child: Text(labels[i]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Sparkline ────────────────────────────────────────────────────────────────
+// Draws in on intro, morphs between ranges, shows a pulsing live dot at rest,
+// and a guide line + dot while the user scrubs.
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({
+    required this.from,
+    required this.to,
+    required this.morph,
+    required this.intro,
+    required this.pulse,
+    required this.scrub,
+  }) : super(repaint: Listenable.merge([morph, intro, pulse]));
+
+  final List<double> from;
+  final List<double> to;
+  final Animation<double> morph;
+  final Animation<double> intro;
+  final Animation<double> pulse;
+  final int? scrub;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final progress = intro.value;
+    if (progress <= 0) return;
+
+    final vals = _lerpList(from, to, Curves.easeOutCubic.transform(morph.value));
+    var lo = vals.first, hi = vals.first;
+    for (final v in vals) {
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    final span = (hi - lo) < 1 ? 1.0 : hi - lo;
+
+    const padTop = 10.0, padBottom = 6.0;
+    final n = vals.length;
+    final pts = <Offset>[
+      for (var i = 0; i < n; i++)
+        Offset(
+          i / (n - 1) * size.width,
+          padTop + (1 - (vals[i] - lo) / span) * (size.height - padTop - padBottom),
+        ),
+    ];
+
+    final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (var i = 1; i < n; i++) {
+      final a = pts[i - 1];
+      final b = pts[i];
+      final cx = (a.dx + b.dx) / 2;
+      path.cubicTo(cx, a.dy, cx, b.dy, b.dx, b.dy);
+    }
+
+    final metric = path.computeMetrics().first;
+    final len = metric.length * progress;
+    final shown = metric.extractPath(0, len);
+    final end = metric.getTangentForOffset(len)?.position ?? pts.first;
+
+    // Soft fill under the line.
+    final fill = Path.from(shown)
+      ..lineTo(end.dx, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      fill,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            _C.growth.withValues(alpha: 0.22),
+            _C.growth.withValues(alpha: 0.0),
+          ],
+        ).createShader(Offset.zero & size),
+    );
+
+    // The line.
+    canvas.drawPath(
+      shown,
+      Paint()
+        ..color = _C.growth
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    final s = scrub;
+    if (s != null && progress >= 1) {
+      // Scrubbing: vertical guide + dot snapped to the data point.
+      final p = pts[s];
+      canvas.drawLine(
+        Offset(p.dx, 0),
+        Offset(p.dx, size.height),
+        Paint()
+          ..color = _C.ink.withValues(alpha: 0.12)
+          ..strokeWidth = 1.5,
+      );
+      _dot(canvas, p, halo: 10);
+    } else {
+      // At rest: gently pulsing "live" dot at the end of the line.
+      if (progress >= 1) {
+        final t = pulse.value;
+        canvas.drawCircle(
+          end,
+          9 + t * 7,
+          Paint()..color = _C.growth.withValues(alpha: 0.22 * (1 - t)),
+        );
+      }
+      _dot(canvas, end, halo: 9);
+    }
+  }
+
+  void _dot(Canvas canvas, Offset c, {required double halo}) {
+    canvas.drawCircle(c, halo, Paint()..color = _C.growth.withValues(alpha: 0.18));
+    canvas.drawCircle(c, 5, Paint()..color = _C.ivory);
+    canvas.drawCircle(
+      c,
+      5,
+      Paint()
+        ..color = _C.growth
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+  }
+
+  // morph / intro / pulse repaint through the `repaint` listenable.
+  @override
+  bool shouldRepaint(_SparklinePainter old) =>
+      old.from != from || old.to != to || old.scrub != scrub;
 }
 
 class _InsightChip extends StatelessWidget {
@@ -501,89 +964,6 @@ class _StreakChip extends StatelessWidget {
   }
 }
 
-// ── Sparkline ────────────────────────────────────────────────────────────────
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter({required this.progress});
-  final double progress;
-
-  static const _data = [
-    0.30, 0.38, 0.34, 0.48, 0.44, 0.56, 0.52, 0.68, 0.63, 0.80, 0.92,
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (progress <= 0) return;
-
-    final pts = <Offset>[
-      for (var i = 0; i < _data.length; i++)
-        Offset(
-          i / (_data.length - 1) * size.width,
-          size.height - _data[i] * size.height,
-        ),
-    ];
-
-    final path = Path()..moveTo(pts.first.dx, pts.first.dy);
-    for (var i = 1; i < pts.length; i++) {
-      final a = pts[i - 1];
-      final b = pts[i];
-      final cx = (a.dx + b.dx) / 2;
-      path.cubicTo(cx, a.dy, cx, b.dy, b.dx, b.dy);
-    }
-
-    final metric = path.computeMetrics().first;
-    final len = metric.length * progress;
-    final shown = metric.extractPath(0, len);
-    final end = metric.getTangentForOffset(len)?.position ?? pts.first;
-
-    // Soft fill under the line.
-    final fill = Path.from(shown)
-      ..lineTo(end.dx, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(
-      fill,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            _C.growth.withValues(alpha: 0.22),
-            _C.growth.withValues(alpha: 0.0),
-          ],
-        ).createShader(Offset.zero & size),
-    );
-
-    // The line.
-    canvas.drawPath(
-      shown,
-      Paint()
-        ..color = _C.growth
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // Leading dot.
-    canvas.drawCircle(
-      end,
-      9,
-      Paint()..color = _C.growth.withValues(alpha: 0.18),
-    );
-    canvas.drawCircle(end, 5, Paint()..color = _C.ivory);
-    canvas.drawCircle(
-      end,
-      5,
-      Paint()
-        ..color = _C.growth
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SparklinePainter old) => old.progress != progress;
-}
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 class _PrimaryButton extends StatelessWidget {

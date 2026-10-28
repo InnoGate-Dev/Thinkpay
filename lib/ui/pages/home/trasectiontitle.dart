@@ -40,15 +40,27 @@ class TransactionTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 Text(
                   transaction.category,
-                  style: GoogleFonts.inter(
-                    color: tc.text40,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                  style: GoogleFonts.manrope(
+                    color: tc.text100,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    transaction.notes!,
+                    style: GoogleFonts.inter(
+                      color: tc.text40,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
