@@ -5,9 +5,40 @@ import 'package:Thinkpay/core/constant/theme_provider.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
+import 'package:Thinkpay/core/repository/userRepo.dart';
+import 'package:Thinkpay/core/errors/exceptions.dart';
+import 'package:Thinkpay/ui/pages/profile/ChangePassword.dart';
 
-class Profile extends StatelessWidget {
+class Profile extends StatefulWidget {
   const Profile({super.key});
+
+  @override
+  State<Profile> createState() => _ProfileState();
+}
+
+class _ProfileState extends State<Profile> {
+  final _store = UserProfileStore();
+  bool _loading = false;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() { _loading = true; _loadError = null; });
+    try {
+      _store.setUser(await UserRepository().getProfile());
+    } on ApiException catch (e) {
+      _loadError = e.message;
+    } catch (e) {
+      _loadError = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +77,13 @@ class Profile extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
             children: [
+              if (_loading) const LinearProgressIndicator(),
+              if (_loadError != null)
+                Card(color: tc.surface, child: ListTile(
+                  title: Text('Could not load profile', style: TextStyle(color: tc.text100)),
+                  subtitle: Text(_loadError!, style: TextStyle(color: tc.text40)),
+                  trailing: IconButton(icon: Icon(Icons.refresh, color: tc.lime), onPressed: _loadProfile),
+                )),
               // ── Avatar + info ───────────────────────────────────────────
               Center(
                 child: Column(children: [
@@ -68,6 +106,14 @@ class Profile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(profileStore.email,
                       style: TextStyle(color: tc.text40, fontSize: 13)),
+                  if (profileStore.birthday != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Birthday: ${_formatBirthday(profileStore.birthday!)}', style: TextStyle(color: tc.text40, fontSize: 12)),
+                  ],
+                  if (profileStore.isLeader) ...[
+                    const SizedBox(height: 8),
+                    Chip(label: const Text('Leader'), backgroundColor: tc.lime.withValues(alpha: .15), labelStyle: TextStyle(color: tc.lime)),
+                  ],
                   if (profileStore.phone.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(profileStore.phone,
@@ -86,6 +132,14 @@ class Profile extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 28),
+
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.lock_outline, color: tc.lime),
+                title: Text('Change password', style: TextStyle(color: tc.text100, fontWeight: FontWeight.w600)),
+                trailing: Icon(Icons.chevron_right, color: tc.text40),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordPage())),
+              ),
 
               // ── Stats row ──────────────────────────────────────────────
               Row(children: [
@@ -176,6 +230,9 @@ class Profile extends StatelessWidget {
     );
   }
 }
+
+String _formatBirthday(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {

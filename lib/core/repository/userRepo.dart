@@ -78,6 +78,35 @@ class UserRepository {
 
   // ── User ──────────────────────────────────────────────────────────────────
 
+  Future<User> getProfile() async =>
+      _parseUserResponse(await _userService.getProfile());
+
+  Future<User> updateProfile({
+    required String name,
+    required DateTime? birthday,
+  }) async => _parseUserResponse(await _userService.updateProfile(
+        name: name,
+        birthday: birthday?.toUtc().toIso8601String(),
+      ));
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _userService.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
+  User _parseUserResponse(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw FormatException('Profile response did not contain user data.');
+    }
+    return User.fromJson(data);
+  }
+
   /// Upgrades the currently logged-in user to a leader role.
   Future<void> upgradeToLeader({
     required String socialMediaChannelName,

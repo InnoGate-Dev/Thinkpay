@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/errors/exceptions.dart';
+import 'package:Thinkpay/core/repository/userRepo.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -10,273 +12,128 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
+  final _formKey = GlobalKey<FormState>();
   final _store = UserProfileStore();
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _emailCtrl;
-  late final TextEditingController _phoneCtrl;
-  late final TextEditingController _bioCtrl;
+  final _nameCtrl = TextEditingController();
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _nameCtrl  = TextEditingController(text: _store.name);
-    _emailCtrl = TextEditingController(text: _store.email);
-    _phoneCtrl = TextEditingController(text: _store.phone);
-    _bioCtrl   = TextEditingController(text: _store.bio);
+    _nameCtrl.text = _store.name;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _bioCtrl.dispose();
     super.dispose();
   }
 
-  void _save() {
-    final name  = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-
-    if (name.isEmpty || email.isEmpty) {
-      final tc = ThemeColors.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Name and email are required.'),
-        backgroundColor: tc.red,
-      ));
-      return;
-    }
-
-    _store.updateProfile(
-      name:  name,
-      email: email,
-      phone: _phoneCtrl.text.trim(),
-      bio:   _bioCtrl.text.trim(),
+  Future<void> _selectBirthday() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _store.birthday ?? DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
     );
+    if (date != null) setState(() => _store.birthday = date);
+  }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Profile updated successfully!'),
-        backgroundColor: ThemeColors.of(context).lime,
-      ));
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final user = await UserRepository().updateProfile(
+        name: _nameCtrl.text.trim(),
+        birthday: _store.birthday == null
+            ? null
+            : DateTime.utc(_store.birthday!.year, _store.birthday!.month, _store.birthday!.day),
+      );
+      _store.setUser(user);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('Profile updated successfully'), backgroundColor: ThemeColors.of(context).lime),
+      );
       Navigator.pop(context);
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: ThemeColors.of(context).red),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
-
     return Scaffold(
       backgroundColor: tc.background,
       appBar: AppBar(
         backgroundColor: tc.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc.text100, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('Edit Profile',
-            style: TextStyle(
-                color: tc.text100, fontSize: 18, fontWeight: FontWeight.w700)),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: Text('Save',
-                style: TextStyle(
-                    color: tc.lime,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700)),
-          ),
-        ],
+        title: Text('Edit Profile', style: TextStyle(color: tc.text100, fontWeight: FontWeight.w700)),
+        iconTheme: IconThemeData(color: tc.text100),
+        actions: [TextButton(onPressed: _saving ? null : _save, child: Text('Save', style: TextStyle(color: tc.lime)))],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // ── Avatar ──────────────────────────────────────────────────────
-          Center(
-            child: Stack(
-              children: [
-                Container(
-                  width: 96, height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [tc.cardGradientStart, tc.cardGradientEnd],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(color: tc.limeBorder, width: 2),
-                  ),
-                  child: Icon(Icons.person_rounded, color: tc.lime, size: 48),
-                ),
-                Positioned(
-                  bottom: 0, right: 0,
-                  child: Container(
-                    width: 30, height: 30,
-                    decoration: BoxDecoration(
-                      color: tc.lime,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: tc.background, width: 2),
-                    ),
-                    child: Icon(Icons.camera_alt_rounded,
-                        color: tc.background, size: 15),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text('Change photo',
-                style: TextStyle(color: tc.lime, fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(height: 28),
-
-          // ── Fields ───────────────────────────────────────────────────────
-          _SectionLabel('Personal Info', tc),
-          const SizedBox(height: 10),
-          _EditField(
+      body: Form(
+        key: _formKey,
+        child: ListView(padding: const EdgeInsets.all(20), children: [
+          _label('Full name', tc),
+          TextFormField(
             controller: _nameCtrl,
-            label: 'Full Name',
-            hint: 'Enter your name',
-            icon: Icons.person_outline_rounded,
-            tc: tc,
-          ),
-          const SizedBox(height: 12),
-          _EditField(
-            controller: _emailCtrl,
-            label: 'Email',
-            hint: 'Enter your email',
-            icon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
-            tc: tc,
-          ),
-          const SizedBox(height: 12),
-          _EditField(
-            controller: _phoneCtrl,
-            label: 'Phone',
-            hint: 'Enter your phone number',
-            icon: Icons.phone_outlined,
-            keyboardType: TextInputType.phone,
-            tc: tc,
+            textCapitalization: TextCapitalization.words,
+            decoration: _decoration('Enter your name', tc),
+            validator: (value) {
+              final name = value?.trim() ?? '';
+              if (name.length < 2) return 'Name must be at least 2 characters';
+              if (name.length > 255) return 'Name must be 255 characters or fewer';
+              return null;
+            },
           ),
           const SizedBox(height: 20),
-
-          _SectionLabel('About', tc),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: tc.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: tc.border),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            child: TextField(
-              controller: _bioCtrl,
-              maxLines: 4,
-              style: TextStyle(color: tc.text100, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Tell us a bit about yourself…',
-                hintStyle: TextStyle(color: tc.text40, fontSize: 14),
-                border: InputBorder.none,
-              ),
-            ),
+          _label('Birthday', tc),
+          OutlinedButton.icon(
+            onPressed: _selectBirthday,
+            icon: Icon(Icons.calendar_month_outlined, color: tc.lime),
+            label: Text(_store.birthday == null ? 'Add birthday (optional)' : _formatDate(_store.birthday!), style: TextStyle(color: tc.text100)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), alignment: Alignment.centerLeft, side: BorderSide(color: tc.border)),
           ),
+          if (_store.birthday != null)
+            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => setState(() => _store.birthday = null), child: Text('Clear birthday', style: TextStyle(color: tc.text40)))),
           const SizedBox(height: 28),
-
-          // ── Save button ──────────────────────────────────────────────────
           SizedBox(
-            width: double.infinity,
-            height: 54,
+            height: 52,
             child: ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tc.lime,
-                foregroundColor: tc.background,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Save Changes',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              onPressed: _saving ? null : _save,
+              style: ElevatedButton.styleFrom(backgroundColor: tc.lime, foregroundColor: tc.background, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              child: _saving ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
-        ],
+        ]),
       ),
     );
   }
-}
 
-// ── Shared field ──────────────────────────────────────────────────────────────
-class _EditField extends StatelessWidget {
-  const _EditField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.icon,
-    required this.tc,
-    this.keyboardType = TextInputType.text,
-  });
-  final TextEditingController controller;
-  final String label, hint;
-  final IconData icon;
-  final ThemeColors tc;
-  final TextInputType keyboardType;
+  Widget _label(String text, ThemeColors tc) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(text, style: TextStyle(color: tc.text100, fontWeight: FontWeight.w600)),
+  );
 
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label.toUpperCase(),
-              style: TextStyle(
-                  color: tc.text40,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8)),
-          const SizedBox(height: 6),
-          Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: tc.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: tc.border),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(children: [
-              Icon(icon, color: tc.text40, size: 18),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  style: TextStyle(color: tc.text100, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: TextStyle(color: tc.text40, fontSize: 14),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ],
-      );
-}
+  InputDecoration _decoration(String hint, ThemeColors tc) => InputDecoration(
+    hintText: hint,
+    filled: true,
+    fillColor: tc.surface,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tc.border)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tc.border)),
+  );
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text, this.tc);
-  final String text;
-  final ThemeColors tc;
-
-  @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: TextStyle(
-            color: tc.text100,
-            fontSize: 16,
-            fontWeight: FontWeight.w700),
-      );
+  String _formatDate(DateTime date) => '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }

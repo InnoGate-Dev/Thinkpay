@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../model/userModel.dart';
 
 /// Holds user profile data and selected currency.
 /// A ChangeNotifier singleton – all screens share the same instance.
@@ -12,6 +13,18 @@ class UserProfileStore extends ChangeNotifier {
   String email    = 'user@thinkpay.app';
   String phone    = '';
   String bio      = '';
+  DateTime? birthday;
+  bool isLeader = false;
+  bool isLoaded = false;
+
+  void setUser(User user) {
+    name = user.name;
+    email = user.email;
+    birthday = user.birthday;
+    isLeader = user.isLeader;
+    isLoaded = true;
+    notifyListeners();
+  }
 
   void updateProfile({
     required String name,

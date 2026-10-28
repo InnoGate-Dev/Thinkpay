@@ -9,6 +9,8 @@ class ApiEndpoints {
 
   // // Users
   static const String upgradeToLeader = '/users/upgrade-to-leader';
+  static const String currentUser = '/users/me';
+  static const String changePassword = '/users/me/password';
 
   // Leader
   static const String leaderDashboard = '/leader/dashboard';
