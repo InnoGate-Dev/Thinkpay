@@ -29,6 +29,15 @@ class _TransferTarget {
   final GoalModel? goal;
   final LoanModel? loan;
 
+  Object get _id => type == _TransferDest.goal ? goal!.id : loan!.id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _TransferTarget && other.type == type && other._id == _id;
+
+  @override
+  int get hashCode => Object.hash(type, _id);
+
   String get label => type == _TransferDest.goal ? goal!.name : loan!.purpose;
 }
 

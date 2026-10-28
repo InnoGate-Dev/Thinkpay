@@ -11,31 +11,6 @@ import 'package:Thinkpay/providers/finance_provider.dart';
 import '../../component/add_transaction_sheet.dart';
 import 'finance_cate.dart';
 
-// TODO: point this at wherever your FinancePage widget actually lives.
-// It's the file you pasted above (the one with _FinanceTab / _FinanceCard)
-/// ============================================================================
-/// FinanceDashboardPage
-/// ----------------------------------------------------------------------------
-/// Landing screen for the Finance section. Gives a fast read on where the user
-/// stands — net balance, income vs expense vs transfers, a trend view, top
-/// spend categories, and recent activity — then lets them drill into:
-///
-///   • "Manage Budgets"   → FinancePage   (add/edit/delete budget categories)
-///   • "See all" / stat tap → Transection page (full transaction history)
-///
-/// DESIGN ASSUMPTIONS — please check these against your real models:
-///   1. `TransactionType` has three values: income, expense, transfer
-///      (your Finance page already excludes transfer from the budget tabs,
-///      which matches "transfers = loans / other payments, not budgeted")
-///   2. `TransactionModel` exposes: amount (double), type (TransactionType),
-///      category (String), title (String), date (DateTime)
-///      → rename fields in the `t.xxx` calls below if yours differ.
-///   3. `FinanceProvider` exposes: transactions (List<TransactionModel>),
-///      expenseByCategory (Map<String, double>) — already used by FinancePage.
-///
-/// If any of these don't line up 1:1, the fix is almost always a rename, not
-/// a restructure — the layout/logic below doesn't depend on exact names.
-/// ============================================================================
 class FinanceDashboardPage extends StatefulWidget {
   const FinanceDashboardPage({super.key});
 

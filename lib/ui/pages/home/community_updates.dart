@@ -69,16 +69,16 @@ class CommunityUpdatesSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  'Community Updates',
-                  style: GoogleFonts.manrope(
-                    color: tc.text100,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                // Text(
+                //   'Community Updates',
+                //   style: GoogleFonts.manrope(
+                //     color: tc.text100,
+                //     fontSize: 16,
+                //     fontWeight: FontWeight.w700,
+                //     letterSpacing: -0.3,
+                //   ),
+                // ),
+                // const SizedBox(width: 8),
                 // Live indicator
                 Container(
                   padding: const EdgeInsets.symmetric(

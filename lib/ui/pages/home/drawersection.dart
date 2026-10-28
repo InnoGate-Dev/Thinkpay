@@ -141,7 +141,7 @@ class ProfileDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: GestureDetector(
                 onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context, '/login', (_) => false),
+                    context, '/startup', (_) => false),
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(

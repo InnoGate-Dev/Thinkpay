@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              //  CommunityUpdatesSection(tc: tc),
+              //CommunityUpdatesSection(tc: tc),
              // const SizedBox(height: 10),
               // if (recent.isEmpty)
               //   EmptyState(

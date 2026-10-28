@@ -1,4 +1,4 @@
-import 'package:Thinkpay/model/goal_model.dart';
+
 import 'package:Thinkpay/model/loan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
