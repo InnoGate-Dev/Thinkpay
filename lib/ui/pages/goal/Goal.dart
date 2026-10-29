@@ -6,6 +6,7 @@ import 'package:Thinkpay/core/repository/goalRepo.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_goal_sheet.dart';
+import 'package:Thinkpay/ui/pages/goal/Completed_goal.dart';
 
 class SetGoalPage extends StatefulWidget {
   const SetGoalPage({super.key});
@@ -232,6 +233,14 @@ class _SetGoalPageState extends State<SetGoalPage>
                               tc: tc,
                               provider: _provider,
                               onRefresh: _loadGoals,
+                              onNavigateToCompleted: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CompletedGoalPage(),
+                                  ),
+                                );
+                              },
                             ),
                             _GoalList(
                               tc: tc,
@@ -267,11 +276,13 @@ class _GoalOverviewTab extends StatefulWidget {
     required this.tc,
     required this.provider,
     required this.onRefresh,
+    required this.onNavigateToCompleted,
   });
 
   final ThemeColors tc;
   final FinanceProvider provider;
   final Future<void> Function() onRefresh;
+  final VoidCallback onNavigateToCompleted;
 
   @override
   State<_GoalOverviewTab> createState() => _GoalOverviewTabState();
@@ -480,14 +491,28 @@ class _GoalOverviewTabState extends State<_GoalOverviewTab> {
         Row(
           children: [
             Expanded(
-              child: _OverviewStatChip(
-                tc: tc,
-                icon: Icons.check_circle_rounded,
-                iconColor: tc.intelligenceAccent,
-                bgColor: tc.intelligenceAccentDim,
-                label: 'Completed',
-                value: '${completed.length}',
-                sub: 'goals done',
+              child: Stack(
+                children: [
+                  _OverviewStatChip(
+                    tc: tc,
+                    icon: Icons.check_circle_rounded,
+                    iconColor: tc.intelligenceAccent,
+                    bgColor: tc.intelligenceAccentDim,
+                    label: 'Completed',
+                    value: '${completed.length}',
+                    sub: 'goals done',
+                    onTap: widget.onNavigateToCompleted,
+                  ),
+                  Positioned(
+                    top: 15,
+                    right: 15,
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: tc.intelligenceAccent.withOpacity(0.6),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 10),
@@ -650,6 +675,7 @@ class _OverviewStatChip extends StatelessWidget {
     required this.label,
     required this.value,
     required this.sub,
+    this.onTap,
   });
 
   final ThemeColors tc;
@@ -659,72 +685,80 @@ class _OverviewStatChip extends StatelessWidget {
   final String label;
   final String value;
   final String sub;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: tc.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: tc.border, width: 0.8),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: tc.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: tc.border, width: 0.8),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.manrope(
-                    color: tc.text100,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    color: tc.text40,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: GoogleFonts.manrope(
+                        color: tc.text100,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        color: tc.text40,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      sub,
+                      style: GoogleFonts.inter(
+                        color: iconColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  sub,
-                  style: GoogleFonts.inter(
-                    color: iconColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1181,7 +1215,7 @@ class _GoalListState extends State<_GoalList> {
           return g.type != GoalType.debt && !cleanId.endsWith('_L');
         }).toList();
         final goals = displayGoals
-            .where((g) => g.type == widget.filterType)
+            .where((g) => g.type == widget.filterType && !g.isCompleted)
             .toList();
 
         if (goals.isEmpty) {

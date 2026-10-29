@@ -12,6 +12,7 @@ import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/services/loan_service.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
+import 'package:Thinkpay/ui/component/loan_card.dart';
 import 'package:Thinkpay/ui/component/navbar.dart';
 import 'package:Thinkpay/ui/pages/Notification/Notification.dart';
 import 'package:Thinkpay/ui/pages/home/balancecard.dart';
@@ -19,6 +20,7 @@ import 'package:Thinkpay/ui/pages/home/community_updates.dart';
 import 'package:Thinkpay/ui/pages/home/empty_state.dart';
 import 'package:Thinkpay/ui/pages/home/home_helpers.dart';
 import 'package:Thinkpay/ui/pages/home/transaction_list.dart';
+import 'package:Thinkpay/ui/pages/loan/loan_detail_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -87,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => const AddTransactionSheet(),
     );
+  }
+
+  Future<void> _openLoanDetail(LoanModel loan) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoanDetailPage(loan: loan, service: _loanService),
+      ),
+    );
+    _loadData();
   }
 
   @override
@@ -278,6 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_loans.isNotEmpty) ...[
                   _HomeLoansSection(
                     loans: _loans,
+                    onLoanTap: _openLoanDetail,
                     tc: tc,
                   ),
                   const SizedBox(height: 20),
@@ -801,17 +814,20 @@ class _HomeGoalsSection extends StatelessWidget {
 
 // ── Active Loans Summary Section ──────────────────────────────────────────────
 class _HomeLoansSection extends StatelessWidget {
-  const _HomeLoansSection({required this.loans, required this.tc});
+  const _HomeLoansSection({
+    required this.loans,
+    required this.onLoanTap,
+    required this.tc,
+  });
+
   final List<LoanModel> loans;
+  final ValueChanged<LoanModel> onLoanTap;
   final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) {
     final activeLoans = loans.where((l) => l.status != LoanStatus.paidOff).toList();
-    final totalPayable = loans.fold<double>(0, (s, l) => s + l.totalPayable);
-    final totalPaid = loans.fold<double>(0, (s, l) => s + l.amountPaid);
-    final totalRemaining = loans.fold<double>(0, (s, l) => s + l.remainingBalance);
-    final progress = totalPayable <= 0 ? 0.0 : (totalPaid / totalPayable).clamp(0.0, 1.0);
+    if (activeLoans.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -842,70 +858,11 @@ class _HomeLoansSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: tc.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: tc.border, width: 0.8),
+        for (final loan in activeLoans)
+          LoanCard(
+            loan: loan,
+            onTap: () => onLoanTap(loan),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${activeLoans.length} Active Loan${activeLoans.length == 1 ? '' : 's'}',
-                        style: GoogleFonts.manrope(
-                          color: tc.text100,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'Remaining: Rs. ${formatAmount(totalRemaining)}',
-                        style: GoogleFonts.inter(
-                          color: tc.accentExpense,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: tc.coreAction.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${(progress * 100).toInt()}% Paid',
-                      style: GoogleFonts.manrope(
-                        color: tc.coreAction,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: tc.surface2,
-                  color: tc.coreAction,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
