@@ -44,6 +44,25 @@ class LoanService {
     throw Exception('Unexpected response format when creating loan');
   }
 
+
+  /// Fully updates a loan via PUT /loans/{id}.
+  Future<LoanModel> updateLoan(LoanModel loan) async {
+    final response = await _apiClient.put(
+      ApiEndpoints.loanById(loan.id),
+      data: loan.toUpdateJson(),
+    );
+    if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response;
+      final loanJson = data is List ? data.first : data;
+      return LoanModel.fromJson(loanJson as Map<String, dynamic>);
+    }
+    throw Exception('Unexpected response format when updating loan');
+  }
+
+  /// Deletes a loan via DELETE /loans/{id}.
+  Future<void> deleteLoan(int loanId) async {
+    await _apiClient.delete(ApiEndpoints.loanById(loanId));
+  }
   /// Updates status of a loan.
   Future<void> updateLoanStatus(int loanId, LoanStatus status) async {
     await _apiClient.patch(

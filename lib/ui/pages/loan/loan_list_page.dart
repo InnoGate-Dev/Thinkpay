@@ -62,7 +62,31 @@ class _LoanListPageState extends State<LoanListPage> {
       context,
       MaterialPageRoute(builder: (_) => LoanDetailPage(loan: loan, service: widget.service)),
     );
+    // Always refresh — the loan may have been edited or deleted.
     _refresh();
+  }
+
+  /// Inline swipe-to-delete: confirms then calls the API; refreshes on success.
+  Future<void> _swipeDelete(LoanModel loan) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _SwipeDeleteDialog(loanPurpose: loan.purpose),
+    );
+    if (confirmed != true) {
+      // User cancelled — force a list rebuild so the card snaps back.
+      setState(() {});
+      return;
+    }
+    try {
+      await widget.service.deleteLoan(loan.id);
+      _refresh();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete the loan. Please try again.')),
+      );
+      setState(() {}); // snap card back
+    }
   }
 
   @override
@@ -125,7 +149,12 @@ class _LoanListPageState extends State<LoanListPage> {
                         const SizedBox(height: 20),
                         Text('Your Loans', style: GoogleFonts.manrope(color: tc.text100, fontSize: 14, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
-                        for (final loan in loans) LoanCard(loan: loan, onTap: () => _openDetail(loan)),
+                        for (final loan in loans)
+                          _SwipeableLoanCard(
+                            loan: loan,
+                            onTap: () => _openDetail(loan),
+                            onDelete: () => _swipeDelete(loan),
+                          ),
                       ],
                     );
                   },
@@ -135,6 +164,97 @@ class _LoanListPageState extends State<LoanListPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Swipeable wrapper around LoanCard ─────────────────────────────────────
+class _SwipeableLoanCard extends StatelessWidget {
+  const _SwipeableLoanCard({
+    required this.loan,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final LoanModel loan;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = ThemeColors.of(context);
+    return Dismissible(
+      key: ValueKey('loan_${loan.id}'),
+      direction: DismissDirection.endToStart,
+      // Show the red delete background on swipe
+      background: Container(
+        alignment: Alignment.centerRight,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: tc.accentExpense.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: tc.accentExpense.withValues(alpha: 0.3), width: 0.8),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.delete_outline_rounded, color: tc.accentExpense, size: 22),
+            const SizedBox(height: 4),
+            Text('Delete', style: GoogleFonts.inter(color: tc.accentExpense, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+      confirmDismiss: (_) async {
+        onDelete();
+        // Return false here — _swipeDelete handles refresh/snackbar itself.
+        return false;
+      },
+      child: LoanCard(loan: loan, onTap: onTap),
+    );
+  }
+}
+
+// ── Swipe-delete confirmation dialog ──────────────────────────────────────
+class _SwipeDeleteDialog extends StatelessWidget {
+  const _SwipeDeleteDialog({required this.loanPurpose});
+  final String loanPurpose;
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = ThemeColors.of(context);
+    return AlertDialog(
+      backgroundColor: tc.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Delete Loan?',
+        style: GoogleFonts.manrope(color: tc.text100, fontSize: 17, fontWeight: FontWeight.w700),
+      ),
+      content: Text(
+        'Permanently delete "$loanPurpose" and all its payment history?',
+        style: GoogleFonts.inter(color: tc.text70, fontSize: 13, height: 1.5),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context, false),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: tc.text70,
+            side: BorderSide(color: tc.border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: tc.accentExpense,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text('Delete', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        ),
+      ],
     );
   }
 }

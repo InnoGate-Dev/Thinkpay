@@ -96,22 +96,35 @@ class LoanModel {
     };
   }
 
-  LoanModel copyWith({List<LoanPaymentModel>? payments, LoanStatus? status}) {
+  LoanModel copyWith({
+    String? purpose,
+    double? amount,
+    double? interestRate,
+    int? loanDurationMonths,
+    double? monthlyPayment,
+    DateTime? startDate,
+    LoanStatus? status,
+    DateTime? updatedAt,
+    List<LoanPaymentModel>? payments,
+  }) {
     return LoanModel(
       id: id,
       userId: userId,
-      purpose: purpose,
-      amount: amount,
-      interestRate: interestRate,
-      loanDurationMonths: loanDurationMonths,
-      monthlyPayment: monthlyPayment,
-      startDate: startDate,
+      purpose: purpose ?? this.purpose,
+      amount: amount ?? this.amount,
+      interestRate: interestRate ?? this.interestRate,
+      loanDurationMonths: loanDurationMonths ?? this.loanDurationMonths,
+      monthlyPayment: monthlyPayment ?? this.monthlyPayment,
+      startDate: startDate ?? this.startDate,
       status: status ?? this.status,
       createdAt: createdAt,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       payments: payments ?? this.payments,
     );
   }
+
+  /// Flat payload for PUT /loans/{id} — same shape as POST.
+  Map<String, dynamic> toUpdateJson() => toCreateJson();
 
   // ── Computed values used across the UI ──────────────────────────────
   double get totalPayable => monthlyPayment * loanDurationMonths;

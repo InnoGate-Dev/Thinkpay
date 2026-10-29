@@ -637,6 +637,8 @@ class _HomeGoalsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final incompleteGoals = goals.where((g) => !g.isCompleted).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -655,7 +657,7 @@ class _HomeGoalsSection extends StatelessWidget {
             GestureDetector(
               onTap: () => appShellIndexNotifier.value = 4,
               child: Text(
-                'See all (${goals.length})',
+                'See all (${incompleteGoals.length})',
                 style: GoogleFonts.inter(
                   color: tc.coreAction,
                   fontSize: 13,
@@ -666,7 +668,7 @@ class _HomeGoalsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (goals.isEmpty)
+        if (incompleteGoals.isEmpty)
           GestureDetector(
             onTap: () => appShellIndexNotifier.value = 4,
             child: Container(
@@ -722,10 +724,10 @@ class _HomeGoalsSection extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
-              itemCount: goals.length,
+              itemCount: incompleteGoals.length,
               separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                final goal = goals[index];
+                final goal = incompleteGoals[index];
                 final progress = goal.targetAmount > 0
                     ? (goal.savedAmount / goal.targetAmount).clamp(0.0, 1.0)
                     : 0.0;

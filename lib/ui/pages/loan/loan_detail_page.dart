@@ -13,6 +13,7 @@ import '../../component/next_payment_card.dart';
 import '../../component/section_header.dart';
 import '../../component/status_badge.dart';
 import 'add_payment_sheet.dart';
+import 'edit_loan.dart';
 
 
 class LoanDetailPage extends StatefulWidget {
@@ -33,6 +34,7 @@ class _LoanDetailPageState extends State<LoanDetailPage> with SingleTickerProvid
   late final TabController _tabController = TabController(length: 3, vsync: this);
   late LoanModel _loan = widget.loan;
   bool _loadingPayments = true;
+  bool _deleting = false;
 
   @override
   void initState() {
@@ -70,6 +72,41 @@ class _LoanDetailPageState extends State<LoanDetailPage> with SingleTickerProvid
     });
   }
 
+  /// Opens the edit dialog; refreshes state if the user saved changes.
+  Future<void> _editLoan() async {
+    final updated = await EditLoanDialog.show(
+      context,
+      loan: _loan,
+      service: widget.service,
+    );
+    if (updated != null && mounted) {
+      setState(() {
+        _loan = updated.copyWith(payments: _loan.payments);
+      });
+    }
+  }
+
+  /// Asks for confirmation then deletes the loan and pops the page.
+  Future<void> _deleteLoan() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _DeleteConfirmDialog(loanPurpose: _loan.purpose),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      await widget.service.deleteLoan(_loan.id);
+      if (mounted) Navigator.pop(context, _DeleteResult.deleted);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete the loan. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -78,60 +115,123 @@ class _LoanDetailPageState extends State<LoanDetailPage> with SingleTickerProvid
       backgroundColor: tc.background,
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_loan_detail_${_loan.id}',
-        onPressed: _recordPayment,
+        onPressed: _deleting ? null : _recordPayment,
         backgroundColor: tc.coreAction,
         foregroundColor: tc.background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         child: const Icon(Icons.add_rounded, size: 24),
       ),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 20, 0),
-              child: Row(
+      body: _deleting
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc.text100, size: 18),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  Expanded(
-                    child: Text(
-                      _loan.purpose,
-                      style: GoogleFonts.manrope(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w800),
-                      overflow: TextOverflow.ellipsis,
+                  // ── App bar row ────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc.text100, size: 18),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _loan.purpose,
+                            style: GoogleFonts.manrope(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w800),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        StatusBadge(status: _loan.status),
+                        const SizedBox(width: 4),
+                        // Edit button
+                        IconButton(
+                          tooltip: 'Edit loan',
+                          icon: Icon(Icons.edit_outlined, color: tc.text70, size: 20),
+                          onPressed: _editLoan,
+                        ),
+                        // Delete button
+                        IconButton(
+                          tooltip: 'Delete loan',
+                          icon: Icon(Icons.delete_outline_rounded, color: tc.accentExpense, size: 20),
+                          onPressed: _deleteLoan,
+                        ),
+                      ],
                     ),
                   ),
-                  StatusBadge(status: _loan.status),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _DetailHeroCard(loan: _loan),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _LoanTabBar(controller: _tabController),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _DetailsTab(loan: _loan),
+                        _RepaymentTab(loan: _loan, loading: _loadingPayments, onRecordPayment: _recordPayment),
+                        _SummaryTab(loan: _loan),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _DetailHeroCard(loan: _loan),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _LoanTabBar(controller: _tabController),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _DetailsTab(loan: _loan),
-                  _RepaymentTab(loan: _loan, loading: _loadingPayments, onRecordPayment: _recordPayment),
-                  _SummaryTab(loan: _loan),
-                ],
-              ),
-            ),
-          ],
-        ),
+    );
+  }
+}
+
+// ── Sentinel value so LoanListPage knows to remove the card ────────────────
+enum _DeleteResult { deleted }
+
+// ── Delete confirmation dialog ─────────────────────────────────────────────
+class _DeleteConfirmDialog extends StatelessWidget {
+  const _DeleteConfirmDialog({required this.loanPurpose});
+  final String loanPurpose;
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = ThemeColors.of(context);
+    return AlertDialog(
+      backgroundColor: tc.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Delete Loan?',
+        style: GoogleFonts.manrope(color: tc.text100, fontSize: 17, fontWeight: FontWeight.w700),
       ),
+      content: Text(
+        'This will permanently delete "$loanPurpose" and all its payment history. This action cannot be undone.',
+        style: GoogleFonts.inter(color: tc.text70, fontSize: 13, height: 1.5),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context, false),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: tc.text70,
+            side: BorderSide(color: tc.border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: tc.accentExpense,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text('Delete', style: GoogleFonts.manrope(fontWeight: FontWeight.w700)),
+        ),
+      ],
     );
   }
 }
