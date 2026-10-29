@@ -12,6 +12,7 @@ class TransactionService {
     required String amount,
     required DateTime date,
     int? goalId,
+    String? note,
   }) async {
     final data = {
       'category_id': categoryId,
@@ -19,6 +20,7 @@ class TransactionService {
       'amount': amount,
       'date': date.toIso8601String(),
       'goal_id': goalId,
+      if (note != null && note.isNotEmpty) 'note': note,
     };
     final response = await _apiClient.post(ApiEndpoints.transactions, data: data);
     if (response is Map<String, dynamic> && response.containsKey('data')) {

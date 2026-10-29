@@ -13,6 +13,7 @@ class GoalService {
     required String type,
     required String targetAmount,
     String actualAmount = '0.00',
+    String expectedMonthlySpend = '0.00',
     bool isComplete = false,
   }) async {
     final data = {
@@ -20,6 +21,7 @@ class GoalService {
       'type': type,
       'target_amount': targetAmount,
       'actual_amount': actualAmount,
+      'expected_monthly_spend': expectedMonthlySpend,
       'is_complete': isComplete,
     };
     return await _apiClient.post(ApiEndpoints.goals, data: data)
@@ -55,6 +57,7 @@ class GoalService {
     required String type,
     required String targetAmount,
     required String actualAmount,
+    String expectedMonthlySpend = '0.00',
     required bool isComplete,
   }) async {
     final data = {
@@ -62,6 +65,7 @@ class GoalService {
       'type': type,
       'target_amount': targetAmount,
       'actual_amount': actualAmount,
+      'expected_monthly_spend': expectedMonthlySpend,
       'is_complete': isComplete,
     };
     return await _apiClient.put(ApiEndpoints.goalById(id), data: data)

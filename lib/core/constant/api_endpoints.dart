@@ -45,4 +45,19 @@ class ApiEndpoints {
   static const String loans = '/loans';
   static String loanById(int id) => '/loans/$id';
   static String loanPayments(int loanId) => '/loans/$loanId/payments';
+
+  // goal transaction
+
+  static String getgoalTrasection() => '/goaltransactions';
+  static String CreateGoalTrasection() => '/goaltransactions';
+  static String UpdateGoalTrasections(int goalId) => '/goaltransactions/$goalId';
+  static String DeleteGoalTrasections(int goalId) => '/goaltransactions/$goalId';
+
+  // Notifications
+  static const String notifications = '/notifications';
+  static const String unreadNotificationCount = '/notifications/unread-count';
+  static String notificationById(int id) => '/notifications/$id';
+  static String markNotificationAsRead(int id) => '/notifications/$id/read';
+  static const String markAllNotificationsAsRead = '/notifications/read-all';
+  static String deleteNotification(int id) => '/notifications/$id';
 }

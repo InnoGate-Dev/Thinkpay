@@ -32,29 +32,61 @@ class ApiTransaction {
 
   factory ApiTransaction.fromJson(Map<String, dynamic> json) {
     return ApiTransaction(
-      id: json['id'] as int,
-      categoryId: (json['category_id'] as int?) ?? 0,
+      id: _parseInt(json['id']) ?? 0,
+      categoryId: _parseInt(json['category_id']) ?? _parseInt(json['category']) ?? 0,
       type: TransactionType.fromApi(json['type']?.toString() ?? 'EXPENSE'),
       amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
       date: json['date'] != null
-          ? (DateTime.tryParse(json['date']) ?? DateTime.now())
+          ? (DateTime.tryParse(json['date'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      goalId: json['goal_id'] as int?,
-      categoryName: (json['category'] as Map<String, dynamic>?)?['name']
-              as String? ??
-          json['category_name'] as String?,
+      goalId: _parseInt(json['goal_id']) ?? _parseInt(json['goal']),
+      categoryName: _parseCategoryName(json),
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
     );
   }
 
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    if (v is Map) {
+      return _parseInt(v['id'] ?? v['ID']);
+    }
+    return null;
+  }
+
+  static String? _parseCategoryName(Map<String, dynamic> json) {
+    final category = json['category'];
+    if (category is Map) {
+      final name = category['name'] ?? category['Name'];
+      if (name != null) return name.toString();
+    } else if (category is String && category.isNotEmpty) {
+      return category;
+    }
+
+    final categoryId = json['category_id'];
+    if (categoryId is Map) {
+      final name = categoryId['name'] ?? categoryId['Name'];
+      if (name != null) return name.toString();
+    }
+
+    final categoryName = json['category_name'];
+    if (categoryName != null && categoryName.toString().isNotEmpty) {
+      return categoryName.toString();
+    }
+
+    return null;
+  }
+
   /// Converts this [ApiTransaction] into the local [TransactionModel] used
   /// by [FinanceProvider] and the UI.
-  TransactionModel toLocalModel() {
+  TransactionModel toLocalModel({String? fallbackCategory}) {
     return TransactionModel(
       id: id.toString(),
-      category: categoryName ?? type.apiValue,
+      category: categoryName ?? fallbackCategory ?? type.apiValue,
       amount: amount,
       type: type,
       date: date,
@@ -83,6 +115,7 @@ class TransactionRepository {
     required double amount,
     required DateTime date,
     int? goalId,
+    String? notes,
   }) async {
     final raw = await _transactionService.createTransaction(
       categoryId: categoryId,
@@ -90,6 +123,7 @@ class TransactionRepository {
       amount: amount.toStringAsFixed(2),
       date: date.toUtc(),
       goalId: goalId,
+      note: notes,
     );
     return ApiTransaction.fromJson(raw);
   }

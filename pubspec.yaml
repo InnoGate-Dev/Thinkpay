@@ -51,6 +51,8 @@ dependencies:
   google_sign_in: ^6.2.0
   flutter_secure_storage: ^11.0.0
   cupertino_calendar_picker: ^2.2.6
+  tanstack_query: ^1.2.8
+  flutter_local_notifications: ^22.3.3
 
 dev_dependencies:
   flutter_test:

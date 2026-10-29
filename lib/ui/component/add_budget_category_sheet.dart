@@ -96,6 +96,7 @@ class _AddBudgetCategorySheetState extends State<AddBudgetCategorySheet> {
           type: categoryType,
           expectedAmount: amount,
         );
+
         provider.addBudget(created.toBudgetCategory());
         if (!mounted) return;
         Navigator.pop(context);

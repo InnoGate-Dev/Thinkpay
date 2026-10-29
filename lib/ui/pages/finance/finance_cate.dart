@@ -1,6 +1,10 @@
 import 'package:Thinkpay/core/repository/categoryRepo.dart';
+import 'package:Thinkpay/core/repository/goalRepo.dart';
+import 'package:Thinkpay/core/repository/loanRepo.dart';
 import 'package:Thinkpay/core/repository/trasectionRepo.dart';
 import 'package:Thinkpay/model/categoryModel.dart';
+import 'package:Thinkpay/model/goal_model.dart';
+import 'package:Thinkpay/model/loan_model.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,6 +29,10 @@ class _FinancePageState extends State<FinancePage>
   final _provider = FinanceProvider();
   final _categoryRepo = CategoryRepository();
   final _transactionRepo = TransactionRepository();
+  final _goalRepo = GoalRepository();
+  final _loanRepo = LoanRepository();
+  List<GoalModel> _goals = [];
+  List<LoanModel> _loans = [];
   late TabController _tab;
   bool _isLoading = false;
 
@@ -45,26 +53,41 @@ class _FinancePageState extends State<FinancePage>
     super.dispose();
   }
 
-  /// Fetches the user's financial categories and transactions from the backend API
-  /// and populates the [FinanceProvider] so the charts and lists reflect live DB data.
+  /// Fetches the user's financial categories, transactions, goals, and loans
+  /// from the backend API and populates the [FinanceProvider] so the charts
+  /// and lists reflect live DB data.
   Future<void> _loadFinanceData() async {
     setState(() => _isLoading = true);
     try {
       final results = await Future.wait([
         _categoryRepo.getCategories(),
         _transactionRepo.getTransactionsAsLocalModels(),
+        _goalRepo.getGoals(),
+        _loanRepo.getLoans(),
       ]);
       final categories = results[0] as List<Category>;
       final transactions = results[1] as List<TransactionModel>;
+      final goals = results[2] as List<GoalModel>;
+      final loans = results[3] as List<LoanModel>;
 
       _provider.setBudgetCategories(
         categories.map((c) => c.toBudgetCategory()).toList(),
       );
       _provider.setTransactions(transactions);
+      _provider.setGoals(goals);
+
+      if (mounted) {
+        setState(() {
+          _goals = goals;
+          _loans = loans;
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load financial data: ${e.toString()}')),
+        );
+      }
       debugPrint('Failed to load financial data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -280,6 +303,8 @@ class _FinancePageState extends State<FinancePage>
                         onDelete: _deleteCategory,
                         onRefresh: _loadFinanceData,
                         tc: tc,
+                        goals: _goals,
+                        loans: _loans,
                       ),
                     ],
                   ),
@@ -358,6 +383,8 @@ class _FinanceTab extends StatelessWidget {
     required this.onDelete,
     required this.onRefresh,
     required this.tc,
+    this.goals = const [],
+    this.loans = const [],
   });
 
   final List<BudgetCategory> budgets;
@@ -377,9 +404,42 @@ class _FinanceTab extends StatelessWidget {
 
   final ThemeColors tc;
 
+  /// Goals shown as virtual transfer-out items in the Transfers tab.
+  final List<GoalModel> goals;
+
+  /// Loans shown as virtual transfer-out items in the Transfers tab.
+  final List<LoanModel> loans;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Build virtual BudgetCategory entries for goals (Transfer tab only).
+    final List<_VirtualTransferItem> virtualItems = [];
+    if (type == TransactionType.transferOut) {
+      for (final g in goals) {
+        virtualItems.add(_VirtualTransferItem(
+          label: g.name,
+          subtitle: 'Goal · Transfer Out',
+          icon: Icons.flag_rounded,
+          color: tc.coreAction,
+          actual: g.savedAmount,
+          target: g.targetAmount,
+          tc: tc,
+        ));
+      }
+      for (final l in loans) {
+        virtualItems.add(_VirtualTransferItem(
+          label: l.purpose,
+          subtitle: 'Loan · Transfer Out',
+          icon: Icons.account_balance_rounded,
+          color: tc.intelligenceAccent,
+          actual: l.amountPaid,
+          target: l.totalPayable,
+          tc: tc,
+        ));
+      }
+    }
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -521,14 +581,14 @@ class _FinanceTab extends StatelessWidget {
                 ),
               ),
               Text(
-                '${budgets.length} total',
+                '${budgets.length + virtualItems.length} total',
                 style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
               ),
             ],
           ),
           const SizedBox(height: 10),
 
-          if (budgets.isEmpty)
+          if (budgets.isEmpty && virtualItems.isEmpty)
             Container(
               padding: const EdgeInsets.all(36),
               decoration: BoxDecoration(
@@ -570,6 +630,12 @@ class _FinanceTab extends StatelessWidget {
               tc: tc,
             ),
           ),
+
+          // ── Virtual Goal / Loan transfer-out items ─────────────────────────
+          if (virtualItems.isNotEmpty) ...[
+            if (budgets.isNotEmpty) const SizedBox(height: 6),
+            ...virtualItems,
+          ],
         ],
       ),
     );
@@ -801,6 +867,162 @@ class _FinanceCard extends StatelessWidget {
                 ),
                 Text(
                   'of Rs. ${_fmt(expected)}',
+                  style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Virtual transfer-out card (Goal / Loan) ────────────────────────────────────
+/// A read-only budget card displayed in the Transfers tab for goals and loans.
+/// These items are not stored as budget categories but are shown so users
+/// can see their transfer-out progress and select them when adding a transaction.
+class _VirtualTransferItem extends StatelessWidget {
+  const _VirtualTransferItem({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.actual,
+    required this.target,
+    required this.tc,
+  });
+
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final double actual;
+  final double target;
+  final ThemeColors tc;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pct = target > 0 ? (actual / target).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: tc.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+          width: 0.8,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          color: tc.text100,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          color: tc.text40,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Transfer Out',
+                    style: GoogleFonts.inter(
+                      color: color,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 6,
+                      backgroundColor: tc.text10,
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${(pct * 100).toStringAsFixed(0)}%',
+                  style: GoogleFonts.manrope(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Rs. ${_fmt(actual)} transferred',
+                  style: GoogleFonts.inter(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'of Rs. ${_fmt(target)}',
                   style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
                 ),
               ],

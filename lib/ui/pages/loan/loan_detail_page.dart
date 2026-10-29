@@ -62,7 +62,12 @@ class _LoanDetailPageState extends State<LoanDetailPage> with SingleTickerProvid
 
   Future<void> _recordPayment() async {
     final result = await showAddPaymentSheet(context: context, loan: _loan, service: widget.service);
-    if (result != null) _loadPayments();
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _loan = _loan.copyWith(payments: [..._loan.payments, result]);
+      _loadingPayments = false;
+    });
   }
 
   @override

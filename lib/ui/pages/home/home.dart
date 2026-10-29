@@ -9,6 +9,7 @@ import 'package:Thinkpay/ui/pages/home/balancecard.dart';
 import 'package:Thinkpay/ui/pages/home/community_updates.dart';
 import 'package:Thinkpay/ui/pages/home/empty_state.dart';
 import 'package:Thinkpay/ui/pages/home/transaction_list.dart';
+import 'package:Thinkpay/ui/pages/Notification/Notification.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,34 +105,41 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: [
               Row(
                 children: [
-                  IconButton(
-                    icon: Stack(
-                      children: [
-                        Icon(
-                          Icons.notifications_outlined,
-                          color: tc.text70,
-                          size: 22,
-                        ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: tc.coreAction,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: tc.background,
-                                width: 1.2,
-                              ),
+                  ListenableBuilder(
+                    listenable: NotificationStore(),
+                    builder: (context, _) {
+                      final unreadCount = NotificationStore().unreadCount;
+                      return IconButton(
+                        icon: Stack(
+                          children: [
+                            Icon(
+                              Icons.notifications_outlined,
+                              color: tc.text70,
+                              size: 22,
                             ),
-                          ),
+                            if (unreadCount > 0)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: tc.coreAction,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: tc.background,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/notification'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/notification'),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -178,47 +186,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              CommunityUpdatesSection(tc: tc),
-
-              const SizedBox(height: 10),
-
-              // ── Recent transactions ─────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Activity',
-                    style: GoogleFonts.manrope(
-                      color: tc.text100,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/transaction');
-                    },
-                    child: Text(
-                      'See all',
-                      style: GoogleFonts.inter(
-                        color: tc.coreAction,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              if (recent.isEmpty)
-                EmptyState(
-                  message: 'No transactions yet.\nTap + to record one.',
-                  tc: tc,
-                ),
-              if (recent.isNotEmpty)
-                TransactionList(transactions: recent, tc: tc),
+              //  CommunityUpdatesSection(tc: tc),
+             // const SizedBox(height: 10),
+              // if (recent.isEmpty)
+              //   EmptyState(
+              //     message: 'No transactions yet.\nTap + to record one.',
+              //     tc: tc,
+              //   ),
+              // if (recent.isNotEmpty)
+              //   TransactionList(transactions: recent, tc: tc),
             ],
           ),
         );

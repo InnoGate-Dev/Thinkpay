@@ -42,6 +42,7 @@ class GoalRepository {
     required String name,
     required double targetAmount,
     double actualAmount = 0.0,
+    double expectedMonthlySpend = 0.0,
     bool? isComplete,
     GoalType type = GoalType.savings,
   }) async {
@@ -52,6 +53,7 @@ class GoalRepository {
       type: type.apiValue,
       targetAmount: targetAmount.toStringAsFixed(2),
       actualAmount: actualAmount.toStringAsFixed(2),
+      expectedMonthlySpend: expectedMonthlySpend.toStringAsFixed(2),
       isComplete: effectiveIsComplete,
     );
     return GoalModel.fromJson(raw);
@@ -78,6 +80,7 @@ class GoalRepository {
       type: effectiveType.apiValue,
       targetAmount: targetAmount.toStringAsFixed(2),
       actualAmount: effectiveActual.toStringAsFixed(2),
+      expectedMonthlySpend: current.expectedMonthlySpend.toStringAsFixed(2),
       isComplete: effectiveIsComplete,
     );
     return GoalModel.fromJson(raw);
@@ -101,6 +104,7 @@ class GoalRepository {
       type: current.type.apiValue,
       targetAmount: current.targetAmount.toStringAsFixed(2),
       actualAmount: newSaved.toStringAsFixed(2),
+      expectedMonthlySpend: current.expectedMonthlySpend.toStringAsFixed(2),
       isComplete: newSaved >= current.targetAmount,
     );
     return GoalModel.fromJson(raw);

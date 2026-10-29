@@ -1,4 +1,6 @@
+import 'package:Thinkpay/core/repository/goalTrasection.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constant/app_colors.dart';
 import '../../core/repository/goalRepo.dart';
 import 'package:Thinkpay/model/goal_model.dart';
@@ -21,9 +23,9 @@ class AddGoalSheet extends StatefulWidget {
 }
 
 class _AddGoalSheetState extends State<AddGoalSheet> {
-  final _nameCtrl         = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _targetAmountCtrl = TextEditingController();
-  final _actualAmountCtrl = TextEditingController();
+  final _expectSpentAmountCtrl = TextEditingController();
   late GoalType _type;
   bool _submitting = false;
 
@@ -33,13 +35,13 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      _nameCtrl.text         = widget.existing!.name;
+      _nameCtrl.text = widget.existing!.name;
       _targetAmountCtrl.text = widget.existing!.targetAmount.toStringAsFixed(2);
-      _actualAmountCtrl.text = widget.existing!.savedAmount.toStringAsFixed(2);
-      _type                  = widget.existing!.type;
+      _expectSpentAmountCtrl.text = widget.existing!.expectedMonthlySpend.toStringAsFixed(2);
+      _type = widget.existing!.type;
     } else {
-      _type                  = widget.initialType ?? GoalType.savings;
-      _actualAmountCtrl.text = '0.00';
+      _type = widget.initialType ?? GoalType.savings;
+      _expectSpentAmountCtrl.text = '0.00';
     }
   }
 
@@ -47,27 +49,32 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _targetAmountCtrl.dispose();
-    _actualAmountCtrl.dispose();
+    _expectSpentAmountCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final name         = _nameCtrl.text.trim();
-    final targetAmount = double.tryParse(_targetAmountCtrl.text.replaceAll(',', ''));
-    final actualAmount = double.tryParse(_actualAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
+    final name = _nameCtrl.text.trim();
+    final targetAmount = double.tryParse(
+      _targetAmountCtrl.text.replaceAll(',', ''),
+    );
+    final expectedMonthPayment =
+        double.tryParse(_expectSpentAmountCtrl.text.replaceAll(',', '')) ?? 0.0;
 
     if (name.isEmpty || targetAmount == null || targetAmount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter a goal name and valid target amount.'),
+          content: const Text(
+            'Please enter a goal name and valid target amount.',
+          ),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
       return;
     }
 
-    if (actualAmount < 0) {
+    if (expectedMonthPayment < 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -78,21 +85,20 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
       return;
     }
 
-    final isComplete = actualAmount >= targetAmount && targetAmount > 0;
+    final isComplete =  expectedMonthPayment >= targetAmount && targetAmount > 0;
 
     setState(() => _submitting = true);
     try {
-      final repo     = GoalRepository();
+      final repo = GoalRepository();
       final provider = FinanceProvider();
 
       if (_isEditing) {
         // ── Edit existing goal ────────────────────────────────────────────
         final updated = await repo.updateGoal(
           widget.existing!.id,
-          widget.existing!,
+          widget.existing!.copyWith(expectedMonthlySpend: expectedMonthPayment),
           name: name,
           targetAmount: targetAmount,
-          actualAmount: actualAmount,
           type: _type,
         );
         provider.updateGoal(updated, preserveSaved: false);
@@ -101,7 +107,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
         final created = await repo.createGoal(
           name: name,
           targetAmount: targetAmount,
-          actualAmount: actualAmount,
+          expectedMonthlySpend: expectedMonthPayment,
           isComplete: isComplete,
           type: _type,
         );
@@ -128,9 +134,11 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tc          = ThemeColors.of(context);
+    final tc = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final accent      = _type == GoalType.savings ? tc.lime : const Color(0xFF72B4FF);
+    final accent = _type == GoalType.savings
+        ? tc.lime
+        : const Color(0xFF72B4FF);
 
     return Container(
       decoration: BoxDecoration(
@@ -146,19 +154,22 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             // handle
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                    color: tc.text20,
-                    borderRadius: BorderRadius.circular(4)),
+                  color: tc.text20,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Edit Goal' : 'Create New Goal',
               style: TextStyle(
-                  color: tc.text100,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700),
+                color: tc.text100,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -172,54 +183,64 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             // Type toggle
             Container(
               decoration: BoxDecoration(
-                  color: tc.surface2,
-                  borderRadius: BorderRadius.circular(14)),
-              child: Row(children: [
-                _TypeBtn(
-                  label: 'Savings',
-                  icon: Icons.savings_rounded,
-                  selected: _type == GoalType.savings,
-                  color: tc.lime,
-                  onTap: () => setState(() => _type = GoalType.savings),
-                ),
-                _TypeBtn(
-                  label: 'Investment',
-                  icon: Icons.trending_up_rounded,
-                  selected: _type == GoalType.investment,
-                  color: const Color(0xFF72B4FF),
-                  onTap: () => setState(() => _type = GoalType.investment),
-                ),
-              ]),
+                color: tc.surface2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  _TypeBtn(
+                    label: 'Savings',
+                    icon: Icons.savings_rounded,
+                    selected: _type == GoalType.savings,
+                    color: tc.lime,
+                    onTap: () => setState(() => _type = GoalType.savings),
+                  ),
+                  _TypeBtn(
+                    label: 'Investment',
+                    icon: Icons.trending_up_rounded,
+                    selected: _type == GoalType.investment,
+                    color: const Color(0xFF72B4FF),
+                    onTap: () => setState(() => _type = GoalType.investment),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
             _Label('Goal Name', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _nameCtrl,
-                hint: 'e.g. Emergency Fund',
-                icon: Icons.flag_rounded,
-                tc: tc),
+              controller: _nameCtrl,
+              hint: 'e.g. Emergency Fund',
+              icon: Icons.flag_rounded,
+              tc: tc,
+            ),
             const SizedBox(height: 14),
 
-            _Label('Actual Amount (Rs.)', tc),
+            _Label('Expected Monthly Spent Amount', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _actualAmountCtrl,
-                hint: '500.00',
-                icon: Icons.account_balance_wallet_rounded,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                tc: tc),
+              controller: _expectSpentAmountCtrl,
+              hint: '500.00',
+              icon: Icons.account_balance_wallet_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              tc: tc,
+            ),
             const SizedBox(height: 14),
 
             _Label('Target Amount (Rs.)', tc),
             const SizedBox(height: 6),
             _Field(
-                controller: _targetAmountCtrl,
-                hint: '6000.00',
-                icon: Icons.currency_rupee_rounded,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                tc: tc),
+              controller: _targetAmountCtrl,
+              hint: '6000.00',
+              icon: Icons.currency_rupee_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              tc: tc,
+            ),
             const SizedBox(height: 24),
 
             SizedBox(
@@ -233,7 +254,8 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                   disabledBackgroundColor: accent.withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: _submitting
                     ? SizedBox(
@@ -247,7 +269,9 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
                     : Text(
                         _isEditing ? 'Save Changes' : 'Create Goal',
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w700),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
               ),
             ),
@@ -262,10 +286,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
 // Add Amount to Goal Bottom Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 class AddAmountToGoalSheet extends StatefulWidget {
-  const AddAmountToGoalSheet({
-    super.key,
-    required this.goal,
-  });
+  const AddAmountToGoalSheet({super.key, required this.goal});
 
   /// The goal to contribute to. The full model is needed so the repo can
   /// issue a proper update call.
@@ -287,11 +308,57 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
   Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
+
+    // ── Validation: valid positive amount ───────────────────────────────────
     if (amount == null || amount <= 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Enter a valid amount.'),
+          content: const Text('Please enter a valid amount greater than 0.'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+      return;
+    }
+
+    // ── Validation: goal not already complete ───────────────────────────────
+    if (widget.goal.isCompleted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Goal "${widget.goal.name}" is already complete! 🎉'),
+          backgroundColor: ThemeColors.of(context).lime,
+        ),
+      );
+      return;
+    }
+
+    // ── Validation: amount must not exceed remaining balance ─────────────────
+    final remaining = widget.goal.remaining;
+    if (amount > remaining) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Amount exceeds remaining balance '
+            '(Rs. ${remaining.toStringAsFixed(2)}). '
+            'Please enter a smaller amount.',
+          ),
+          backgroundColor: ThemeColors.of(context).red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // ── Parse numeric goal ID from composite string e.g. "42_S" → 42 ────────
+    final idParts = widget.goal.id.split('_');
+    final numericGoalId = int.tryParse(idParts.first);
+    if (numericGoalId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid goal ID format: "${widget.goal.id}".'),
           backgroundColor: ThemeColors.of(context).red,
         ),
       );
@@ -300,29 +367,43 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
     setState(() => _submitting = true);
     try {
-      final repo     = GoalRepository();
+      final repo = GoalRepository();
+      final goalTransactionRepo = GoalTrasectionRepository();
       final provider = FinanceProvider();
+      final now = DateTime.now();
 
-      final updated = await repo.addAmountToGoal(
+      // Determine completion from the balance before this contribution. The
+      // API response may contain a stale completion flag, so don't use it to
+      // decide whether to show the one-time completion dialog.
+      final wasComplete = widget.goal.isCompleted;
+      final reachesTarget = amount >= remaining;
+      final newSavedAmount =
+          (widget.goal.savedAmount + amount).clamp(0.0, widget.goal.targetAmount);
+
+      // Update goal saved amount on the backend
+      await repo.addAmountToGoal(
         widget.goal.id,
         amount,
         widget.goal,
       );
 
+      // Record the goal transaction
+      final addtotrasection = await goalTransactionRepo.createGoalTrasection(
+        goalId: numericGoalId,
+        amount: amount,
+        transactionDateTime: now,
+      );
       // Sync provider with the backend response
-      provider.addAmountToGoal(widget.goal.id, updated.savedAmount);
+      provider.addAmountToGoal(widget.goal.id, newSavedAmount);
 
       if (!mounted) return;
-      Navigator.pop(context);
 
-      if (updated.isCompleted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 Goal "${widget.goal.name}" completed!'),
-            backgroundColor: ThemeColors.of(context).lime,
-          ),
-        );
-      }
+      final isJustCompleted = !wasComplete && reachesTarget;
+      final completedGoal = isJustCompleted
+          ? widget.goal.copyWith(savedAmount: widget.goal.targetAmount)
+          : null;
+
+      Navigator.pop(context, completedGoal);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -338,8 +419,10 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tc          = ThemeColors.of(context);
+    final tc = ThemeColors.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final remaining = widget.goal.remaining;
+    final progress = widget.goal.progress;
 
     return Container(
       decoration: BoxDecoration(
@@ -353,32 +436,89 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                  color: tc.text20, borderRadius: BorderRadius.circular(4)),
+                color: tc.text20,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
           const SizedBox(height: 20),
           Text(
             'Add to "${widget.goal.name}"',
             style: TextStyle(
-                color: tc.text100, fontSize: 20, fontWeight: FontWeight.w700),
+              color: tc.text100,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'How much are you adding to this goal?',
             style: TextStyle(color: tc.text40, fontSize: 13),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
 
-          _Label('Amount (Rs.)', tc),
+          // ── Goal progress info ─────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: tc.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: tc.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Saved: Rs. ${widget.goal.savedAmount.toStringAsFixed(2)}',
+                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    ),
+                    Text(
+                      'Target: Rs. ${widget.goal.targetAmount.toStringAsFixed(2)}',
+                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: tc.text20,
+                    valueColor: AlwaysStoppedAnimation<Color>(tc.lime),
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  remaining <= 0
+                      ? 'Goal already complete! 🎉'
+                      : 'Remaining: Rs. ${remaining.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: remaining <= 0 ? tc.lime : tc.text40,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _Label('Amount to Add (Rs.)', tc),
           const SizedBox(height: 6),
           _Field(
-              controller: _amountCtrl,
-              hint: '0.00',
-              icon: Icons.currency_rupee_rounded,
-              keyboardType: TextInputType.number,
-              tc: tc),
+            controller: _amountCtrl,
+            hint: '0.00',
+            icon: Icons.currency_rupee_rounded,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            tc: tc,
+          ),
           const SizedBox(height: 24),
 
           SizedBox(
@@ -392,7 +532,8 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
                 disabledBackgroundColor: tc.lime.withValues(alpha: 0.5),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: _submitting
                   ? SizedBox(
@@ -403,9 +544,13 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
                         color: tc.background,
                       ),
                     )
-                  : const Text('Add Amount',
+                  : const Text(
+                      'Add Amount',
                       style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -431,46 +576,43 @@ class _TypeBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.all(4),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: selected
-                  ? color.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: selected
-                  ? Border.all(color: color.withValues(alpha: 0.4))
-                  : null,
-            ),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon,
-                      color: selected
-                          ? color
-                          : ThemeColors.of(context).text40,
-                      size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                        color: selected
-                            ? color
-                            : ThemeColors.of(context).text40,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14),
-                  ),
-                ],
+    child: GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: selected
+              ? Border.all(color: color.withValues(alpha: 0.4))
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: selected ? color : ThemeColors.of(context).text40,
+                size: 16,
               ),
-            ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? color : ThemeColors.of(context).text40,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 // ── Shared field ──────────────────────────────────────────────────────────────
@@ -490,32 +632,34 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: tc.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: tc.border),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Row(children: [
-          Icon(icon, color: tc.text40, size: 18),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              style: TextStyle(color: tc.text100, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(color: tc.text40, fontSize: 14),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+    height: 50,
+    decoration: BoxDecoration(
+      color: tc.surface2,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: tc.border),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    child: Row(
+      children: [
+        Icon(icon, color: tc.text40, size: 18),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: TextStyle(color: tc.text100, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: tc.text40, fontSize: 14),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
             ),
           ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }
 
 // ── Label ─────────────────────────────────────────────────────────────────────
@@ -525,11 +669,190 @@ class _Label extends StatelessWidget {
   final ThemeColors tc;
   @override
   Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
-        style: TextStyle(
-            color: tc.text40,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8),
-      );
+    text.toUpperCase(),
+    style: TextStyle(
+      color: tc.text40,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.8,
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Goal Completed Pop-up Screen / Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+void showGoalCompletedDialog(BuildContext context, GoalModel goal) {
+  final tc = ThemeColors.of(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        decoration: BoxDecoration(
+          color: tc.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: tc.coreAction.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Trophy Icon Badge ─────────────────────────────────────
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: tc.coreAction.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: tc.coreAction.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.emoji_events_rounded,
+                color: tc.coreAction,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Pop-Up Title ──────────────────────────────────────────
+            Text(
+              'Goal Completed! 🎉',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                color: tc.text100,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // ── Congratulations Subtitle ──────────────────────────────
+            Text(
+              'Congratulations! You have successfully completed your goal for "${goal.name}".',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: tc.text70,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Goal Details Card ─────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: tc.surface2,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: tc.border,
+                  width: 0.8,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Saved',
+                        style: GoogleFonts.inter(
+                          color: tc.text40,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        'Rs. ${goal.savedAmount.toStringAsFixed(0)}',
+                        style: GoogleFonts.manrope(
+                          color: tc.coreAction,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: 1.0,
+                      minHeight: 8,
+                      backgroundColor: tc.text10,
+                      valueColor: AlwaysStoppedAnimation<Color>(tc.coreAction),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: tc.coreAction,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '100% Target Reached',
+                        style: GoogleFonts.inter(
+                          color: tc.coreAction,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Dismiss Button ────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tc.coreAction,
+                  foregroundColor: tc.background,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  'Awesome!',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

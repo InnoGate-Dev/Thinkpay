@@ -170,7 +170,10 @@ class FinanceProvider extends ChangeNotifier {
   bool addAmountToGoal(String id, double newSavedAmount) {
     final idx = _goals.indexWhere((g) => g.id == id);
     if (idx == -1) return false;
-    _goals[idx].savedAmount = newSavedAmount.clamp(0, _goals[idx].targetAmount);
+    final clamped = newSavedAmount.clamp(0.0, _goals[idx].targetAmount);
+    // Replace with a new object (copyWith) so downstream widgets always get a
+    // fresh reference and rebuild correctly.
+    _goals[idx] = _goals[idx].copyWith(savedAmount: clamped);
     notifyListeners();
     return _goals[idx].isCompleted;
   }
