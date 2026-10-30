@@ -224,15 +224,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              IconButton(
-                onPressed: () => appShellIndexNotifier.value = 2, // AI tab
-                icon: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: tc.intelligenceAccent,
-                  size: 20,
-                ),
-                tooltip: 'AI Financial Assistant',
-              ),
+              // IconButton(
+              //   onPressed: () => appShellIndexNotifier.value = 2, // AI tab
+              //   icon: Icon(
+              //     Icons.auto_awesome_rounded,
+              //     color: tc.intelligenceAccent,
+              //     size: 20,
+              //   ),
+              //   tooltip: 'AI Financial Assistant',
+              // ),
               const SizedBox(width: 4),
             ],
           ),
@@ -365,23 +365,23 @@ class _QuickActionsRow extends StatelessWidget {
             icon: Icons.handshake_outlined,
             label: 'Loans',
             color: const Color(0xFFF59E0B),
-            onTap: () => appShellIndexNotifier.value = 3,
+            onTap: () => appShellIndexNotifier.value = 2,
             tc: tc,
           ),
           _ActionButton(
             icon: Icons.flag_outlined,
             label: 'Goals',
             color: const Color(0xFF10B981),
-            onTap: () => appShellIndexNotifier.value = 4,
+            onTap: () => appShellIndexNotifier.value = 3,
             tc: tc,
           ),
-          _ActionButton(
-            icon: Icons.auto_awesome_rounded,
-            label: 'Ask AI',
-            color: tc.intelligenceAccent,
-            onTap: () => appShellIndexNotifier.value = 2,
-            tc: tc,
-          ),
+          // _ActionButton(
+          //   icon: Icons.auto_awesome_rounded,
+          //   label: 'Ask AI',
+          //   color: tc.intelligenceAccent,
+          //   onTap: () => appShellIndexNotifier.value = 2,
+          //   tc: tc,
+          // ),
         ],
       ),
     );
@@ -655,7 +655,7 @@ class _HomeGoalsSection extends StatelessWidget {
               ),
             ),
             GestureDetector(
-              onTap: () => appShellIndexNotifier.value = 4,
+              onTap: () => appShellIndexNotifier.value = 3,
               child: Text(
                 'See all (${incompleteGoals.length})',
                 style: GoogleFonts.inter(
@@ -670,7 +670,7 @@ class _HomeGoalsSection extends StatelessWidget {
         const SizedBox(height: 12),
         if (incompleteGoals.isEmpty)
           GestureDetector(
-            onTap: () => appShellIndexNotifier.value = 4,
+            onTap: () => appShellIndexNotifier.value = 3,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

@@ -34,7 +34,7 @@ class _AppShellState extends State<AppShell>
   final List<Widget> _pages = [
     const HomeScreen(),
     const FinanceDashboardPage(),
-    const Aichat(),
+   // const Aichat(),
     LoanListPage(),
     // CommunityUpdatePage(),
     const SetGoalPage(),
@@ -168,11 +168,11 @@ class _ThinkPayNavBar extends StatelessWidget {
                 onTap: onTap,
                 tc: tc,
               ),
-              _AiCenterTab(
-                isActive: currentIndex == 2,
-                onTap: () => onTap(2),
-                tc: tc,
-              ),
+              // _AiCenterTab(
+              //   isActive: currentIndex == 2,
+              //   onTap: () => onTap(2),
+              //   tc: tc,
+              // ),
               // _NavTab(
               //   icon: Icons.groups_2_outlined,
               //   activeIcon: Icons.groups_2,
@@ -186,7 +186,7 @@ class _ThinkPayNavBar extends StatelessWidget {
                 icon: Icons.handshake_outlined,
                 activeIcon: Icons.handshake,
                 label: 'Loan',
-                index: 3,
+                index: 2,
                 current: currentIndex,
                 onTap: onTap,
                 tc: tc,
@@ -195,7 +195,7 @@ class _ThinkPayNavBar extends StatelessWidget {
                 icon: Icons.flag_outlined,
                 activeIcon: Icons.flag_rounded,
                 label: 'Goals',
-                index: 4,
+                index: 3,
                 current: currentIndex,
                 onTap: onTap,
                 tc: tc,
