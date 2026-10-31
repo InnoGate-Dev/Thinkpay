@@ -48,11 +48,11 @@ class SupportPage extends StatelessWidget {
           _SectionTitle('Get in Touch', tc),
           const SizedBox(height: 10),
           _SettingsCard(tc: tc, children: [
-            _NavRow(icon: Icons.chat_bubble_outline_rounded, label: 'Live Chat', subtitle: 'Chat with support now', tc: tc, accent: tc.lime),
-            Divider(height: 1, color: tc.border, indent: 52),
+            // _NavRow(icon: Icons.chat_bubble_outline_rounded, label: 'Live Chat', subtitle: 'Chat with support now', tc: tc, accent: tc.lime),
+            // Divider(height: 1, color: tc.border, indent: 52),
             _NavRow(icon: Icons.email_outlined, label: 'Email Support', subtitle: 'support@thinkpay.app', tc: tc),
-            Divider(height: 1, color: tc.border, indent: 52),
-            _NavRow(icon: Icons.phone_outlined, label: 'Call Us', subtitle: '+94 11 000 0000', tc: tc),
+            // Divider(height: 1, color: tc.border, indent: 52),
+            // _NavRow(icon: Icons.phone_outlined, label: 'Call Us', subtitle: '+94 11 000 0000', tc: tc),
           ]),
           const SizedBox(height: 20),
 
