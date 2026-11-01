@@ -61,6 +61,10 @@ class _FinanceDashboardPageState extends State<FinanceDashboardPage> {
     Navigator.pushNamed(context, '/transaction');
   }
 
+  void _goToCreditCardList() {
+    Navigator.pushNamed(context, '/credit-card-list');
+  }
+
   void _openAddTransaction() {
     showModalBottomSheet(
       context: context,
@@ -151,6 +155,11 @@ class _FinanceDashboardPageState extends State<FinanceDashboardPage> {
                     tc: tc,
                     onManageBudget: _goToFinancePage,
                     onViewAll: _goToTransactions,
+                  ),
+                  const SizedBox(height: 20),
+                  _CreditCardSectionCard(
+                    tc: tc,
+                    onTap: _goToCreditCardList,
                   ),
                   const SizedBox(height: 20),
                   _CashFlowCard(
@@ -456,22 +465,153 @@ class _QuickActionsRow extends StatelessWidget {
           child: _QuickActionCard(
             tc: tc,
             icon: Icons.pie_chart_rounded,
-            title: 'Manage Budgets',
-            subtitle: 'Add or edit categories',
+            title: 'Budgets',
+            subtitle: 'Categories',
             onTap: onManageBudget,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _QuickActionCard(
             tc: tc,
             icon: Icons.receipt_long_rounded,
-            title: 'All Transactions',
+            title: 'Transactions',
             subtitle: 'Full history',
             onTap: onViewAll,
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Credit Card Section Card ────────────────────────────────────────────────
+class _CreditCardSectionCard extends StatelessWidget {
+  const _CreditCardSectionCard({
+    required this.tc,
+    required this.onTap,
+  });
+  final ThemeColors tc;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: tc.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tc.border, width: 0.8),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: tc.coreAction.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.credit_card_rounded, color: tc.coreAction, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Credit Cards',
+                    style: GoogleFonts.manrope(
+                      color: tc.text100,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: onTap,
+                child: Text(
+                  'Manage',
+                  style: GoogleFonts.inter(
+                    color: tc.coreAction,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: tc.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: tc.border.withValues(alpha: 0.5), width: 0.8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [tc.coreAction, Color.lerp(tc.coreAction, Colors.black, 0.25)!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.payment_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Credit Card Details',
+                          style: GoogleFonts.inter(
+                            color: tc.text100,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Manage limit, interest rates, closing & due dates',
+                          style: GoogleFonts.inter(
+                            color: tc.text40,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: tc.text40, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

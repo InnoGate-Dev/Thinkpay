@@ -1,4 +1,6 @@
 import 'package:Thinkpay/ui/pages/finance/finacedashboard.dart';
+import 'package:Thinkpay/ui/pages/finance/creditcardDetails.dart';
+import 'package:Thinkpay/ui/pages/finance/creditcardList.dart';
 import 'package:Thinkpay/ui/pages/loan/loan_list_page.dart';
 
 import '../../core/constant/app_colors.dart';
@@ -84,4 +86,6 @@ final routes = <String, WidgetBuilder>{
   '/community-profile-owner': (context) =>
       const CommunityProfilePage(isOwner: true),
   '/community-dashboard': (context) => const CommunityDashboardPage(),
+  '/credit-card-details': (context) => const AddCreditCardScreen(),
+  '/credit-card-list': (context) => const CreditCardListScreen(),
 };
