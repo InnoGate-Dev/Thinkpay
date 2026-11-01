@@ -196,6 +196,9 @@ class _LogoutButtonState extends State<_LogoutButton> {
     setState(() => _busy = true);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    // Close the drawer before leaving the shell, otherwise its "open" state
+    // would outlive the AppShell and keep the bottom nav bar hidden.
+    Scaffold.maybeOf(context)?.closeDrawer();
 
     try {
       // Revokes the token on the backend, then clears it locally.

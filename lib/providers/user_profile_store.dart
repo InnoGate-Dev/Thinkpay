@@ -46,6 +46,20 @@ class UserProfileStore extends ChangeNotifier {
     selectedCurrency = c;
     notifyListeners();
   }
+
+  /// Restores the signed-out defaults so no previous user's data is shown
+  /// after a logout.
+  void clear() {
+    name       = 'User';
+    email      = 'user@thinkpay.app';
+    phone      = '';
+    bio        = '';
+    birthday   = null;
+    isLeader   = false;
+    isLoaded   = false;
+    selectedCurrency = currencies.first;
+    notifyListeners();
+  }
 }
 
 // ── Currency list ──────────────────────────────────────────────────────────────

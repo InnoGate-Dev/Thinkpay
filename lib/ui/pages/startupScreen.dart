@@ -153,8 +153,8 @@ class _StartupScreenState extends State<StartupScreen>
                   ),
                   const SizedBox(height: 28),
                   _PrimaryButton(
-                    label: 'Create your account',
-                    onPressed: () => _go('/signup'),
+                    label: 'Create account',
+                    onPressed: () => _go('/onboarding'),
                   ),
                   const SizedBox(height: 12),
                   _SecondaryButton(

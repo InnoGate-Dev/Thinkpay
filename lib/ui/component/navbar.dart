@@ -9,7 +9,7 @@ import 'package:Thinkpay/ui/pages/home/home.dart';
 import 'package:Thinkpay/ui/pages/home/drawersection.dart';
 
 import '../pages/finance/finacedashboard.dart';
-import '../pages/loan/loan_list_page.dart';
+import '../pages/loan/loan_hub_page.dart';
 
 /// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
 final drawerOpenNotifier = ValueNotifier<bool>(false);
@@ -28,6 +28,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell>
     with SingleTickerProviderStateMixin {
   late int _currentIndex;
+  bool _drawerOpen = false;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -35,7 +36,7 @@ class _AppShellState extends State<AppShell>
     const HomeScreen(),
     const FinanceDashboardPage(),
    // const Aichat(),
-    LoanListPage(),
+    LoanHubPage(),
     // CommunityUpdatePage(),
     const SetGoalPage(),
   ];
@@ -46,6 +47,9 @@ class _AppShellState extends State<AppShell>
     _currentIndex = widget.initialIndex;
     appShellIndexNotifier.value = _currentIndex;
     appShellIndexNotifier.addListener(_onIndexChangedExternally);
+    // The notifier is global, so it can outlive a previous shell (e.g. logging
+    // out while the drawer was open). Always start with the nav bar visible.
+    drawerOpenNotifier.value = false;
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -75,6 +79,14 @@ class _AppShellState extends State<AppShell>
     }
   }
 
+  /// The nav bar follows this shell's own drawer state, not the global
+  /// [drawerOpenNotifier], so a stale global can never hide it.
+  void _onDrawerChanged(bool isOpen) {
+    drawerOpenNotifier.value = isOpen;
+    if (!mounted || isOpen == _drawerOpen) return;
+    setState(() => _drawerOpen = isOpen);
+  }
+
   Future<void> _onTabTapped(int index) async {
     if (index == _currentIndex) return;
     await _fadeCtrl.reverse();
@@ -88,30 +100,25 @@ class _AppShellState extends State<AppShell>
     final tc = ThemeColors.of(context);
     return Scaffold(
       backgroundColor: tc.background,
-      onDrawerChanged: (isOpen) => drawerOpenNotifier.value = isOpen,
+      onDrawerChanged: _onDrawerChanged,
       drawer: const Drawer(child: ProfileDrawer()),
 
       body: FadeTransition(
         opacity: _fadeAnim,
         child: IndexedStack(index: _currentIndex, children: _pages),
       ),
-      bottomNavigationBar: ValueListenableBuilder<bool>(
-        valueListenable: drawerOpenNotifier,
-        builder: (context, drawerOpen, _) {
-          return AnimatedSlide(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            offset: drawerOpen ? const Offset(0, 1) : Offset.zero,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: drawerOpen ? 0.0 : 1.0,
-              child: _ThinkPayNavBar(
-                currentIndex: _currentIndex,
-                onTap: _onTabTapped,
-              ),
-            ),
-          );
-        },
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        offset: _drawerOpen ? const Offset(0, 1) : Offset.zero,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _drawerOpen ? 0.0 : 1.0,
+          child: _ThinkPayNavBar(
+            currentIndex: _currentIndex,
+            onTap: _onTabTapped,
+          ),
+        ),
       ),
     );
   }

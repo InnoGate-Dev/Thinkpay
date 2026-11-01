@@ -11,6 +11,7 @@ import '../../component/info_card.dart';
 import '../../component/metric_card.dart';
 import '../../component/next_payment_card.dart';
 import '../../component/section_header.dart';
+import '../../component/segmented_tab_bar.dart';
 import '../../component/status_badge.dart';
 import 'add_payment_sheet.dart';
 import 'edit_loan.dart';
@@ -169,7 +170,10 @@ class _LoanDetailPageState extends State<LoanDetailPage> with SingleTickerProvid
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _LoanTabBar(controller: _tabController),
+                    child: SegmentedTabBar(
+                      controller: _tabController,
+                      tabs: const ['Details', 'Repayment', 'Summary'],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
@@ -279,40 +283,6 @@ class _DetailHeroCard extends StatelessWidget {
             ),
           ),
           ArcProgressRing(pct: loan.progress, size: 80),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoanTabBar extends StatelessWidget {
-  const _LoanTabBar({required this.controller});
-  final TabController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final tc = ThemeColors.of(context);
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(color: tc.surface2, borderRadius: BorderRadius.circular(10), border: Border.all(color: tc.border, width: 0.5)),
-      child: TabBar(
-        controller: controller,
-        indicator: BoxDecoration(
-          color: tc.surface,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(3),
-        labelColor: tc.text100,
-        unselectedLabelColor: tc.text40,
-        labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
-        unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 12),
-        tabs: const [
-          Tab(text: 'Details', height: 34),
-          Tab(text: 'Repayment', height: 34),
-          Tab(text: 'Summary', height: 34),
         ],
       ),
     );

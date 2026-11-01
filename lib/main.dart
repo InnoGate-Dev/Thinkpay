@@ -1,7 +1,7 @@
 import 'package:Thinkpay/ui/pages/finance/finacedashboard.dart';
 import 'package:Thinkpay/ui/pages/finance/creditcardDetails.dart';
 import 'package:Thinkpay/ui/pages/finance/creditcardList.dart';
-import 'package:Thinkpay/ui/pages/loan/loan_list_page.dart';
+import 'package:Thinkpay/ui/pages/loan/loan_hub_page.dart';
 
 import '../../core/constant/app_colors.dart';
 import '../../core/constant/theme_provider.dart';
@@ -75,7 +75,7 @@ final routes = <String, WidgetBuilder>{
   '/support': (context) => const SupportPage(),
   '/transaction': (context) => Transection(),
   '/news': (context) => const NewsPage(),
-  '/loan': (context) => LoanListPage(),
+  '/loan': (context) => LoanHubPage(),
   '/news-details': (context) => NewsDetailsPage(
     news: ModalRoute.of(context)!.settings.arguments as NewsModel,
   ),
