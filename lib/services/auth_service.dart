@@ -7,6 +7,7 @@ import '../core/network/api_client.dart';
 ///   POST /auth/register
 ///   POST /auth/login
 ///   POST /auth/google
+///   POST /auth/logout
 class AuthService {
   final ApiClient _apiClient;
 
@@ -70,5 +71,13 @@ class AuthService {
       ApiEndpoints.googleAuth,
       data: data,
     ) as Map<String, dynamic>;
+  }
+
+  /// Revokes the current session on the backend.
+  ///
+  /// Once this succeeds the stored JWT is blacklisted server-side and can no
+  /// longer reach any protected endpoint, even if it is replayed.
+  Future<void> logout() async {
+    await _apiClient.post(ApiEndpoints.logout);
   }
 }

@@ -4,6 +4,7 @@ import '../../model/dashboardModel.dart';
 import '../../services/auth_service.dart';
 import '../../services/userService.dart';
 import '../../services/leaderService.dart';
+import '../../core/errors/exceptions.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/constant/app_config.dart';
 import '../../core/network/api_client.dart';
@@ -71,9 +72,21 @@ class UserRepository {
     return _parseAndPersistAuth(raw);
   }
 
-  /// Removes the stored JWT (logout).
+  /// Logs the user out for real.
+  ///
+  /// The token is revoked on the backend first so it can no longer be used
+  /// against the API; the local token is cleared regardless, so a failed or
+  /// offline call (or an already-expired session) never traps the user in a
+  /// signed-in state.
   Future<void> logout() async {
-    await _tokenStorage.deleteToken();
+    try {
+      await _authService.logout();
+    } on ApiException {
+      // Revocation failed (offline, expired or already revoked token).
+      // Local cleanup below still ends the session.
+    } finally {
+      await _tokenStorage.deleteToken();
+    }
   }
 
   // ── User ──────────────────────────────────────────────────────────────────

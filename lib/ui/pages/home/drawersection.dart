@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/constant/theme_provider.dart';
+import 'package:Thinkpay/core/repository/userRepo.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
@@ -139,28 +140,104 @@ class ProfileDrawer extends StatelessWidget {
             // ── Logout ───────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: GestureDetector(
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context, '/startup', (_) => false),
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: tc.redDim,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: tc.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.logout_rounded, color: tc.red, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Log Out',
-                        style: TextStyle(color: tc.red, fontSize: 14, fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-              ),
+              child: _LogoutButton(tc: tc),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+// ── Logout button ─────────────────────────────────────────────────────────────
+class _LogoutButton extends StatefulWidget {
+  const _LogoutButton({required this.tc});
+  final ThemeColors tc;
+
+  @override
+  State<_LogoutButton> createState() => _LogoutButtonState();
+}
+
+class _LogoutButtonState extends State<_LogoutButton> {
+  final UserRepository _userRepo = UserRepository();
+  bool _busy = false;
+
+  Future<void> _confirmAndLogout() async {
+    if (_busy) return;
+
+    final tc = widget.tc;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: tc.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Log out?',
+            style: TextStyle(color: tc.text100, fontSize: 17, fontWeight: FontWeight.w700)),
+        content: Text(
+            'Your session will be revoked and you will need to sign in again.',
+            style: TextStyle(color: tc.text70, fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel',
+                style: TextStyle(color: tc.text70, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Log Out',
+                style: TextStyle(color: tc.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Revokes the token on the backend, then clears it locally.
+      await _userRepo.logout();
+      UserProfileStore().clear();
+      navigator.pushNamedAndRemoveUntil('/startup', (_) => false);
+    } catch (e) {
+      debugPrint('LOGOUT ERROR: $e');
+      if (!mounted) return;
+      setState(() => _busy = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not log out. Please try again.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = widget.tc;
+    return GestureDetector(
+      onTap: _busy ? null : _confirmAndLogout,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: tc.redDim,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: tc.red.withValues(alpha: 0.3)),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          if (_busy)
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: tc.red),
+            )
+          else
+            Icon(Icons.logout_rounded, color: tc.red, size: 18),
+          const SizedBox(width: 8),
+          Text(_busy ? 'Logging out…' : 'Log Out',
+              style: TextStyle(color: tc.red, fontSize: 14, fontWeight: FontWeight.w700)),
+        ]),
+      ),
     );
   }
 }
