@@ -55,6 +55,7 @@ dependencies:
   drift: ^2.23.0            # Core Dart database package
   drift_flutter: ^0.3.1
   flutter_local_notifications: ^22.3.3
+  currency_country_picker: ^1.2.3
 
 dev_dependencies:
   drift_dev: ^2.23.0        # Development/code generator tools

@@ -21,7 +21,7 @@ import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/startupScreen.dart';
-import 'package:Thinkpay/ui/pages/onboarding/onboarding.dart';
+import 'package:Thinkpay/ui/pages/onboarding/onboarding_flow.dart';
 import 'package:Thinkpay/ui/pages/support/support.dart';
 import 'package:Thinkpay/ui/pages/Notification/Notification.dart';
 import 'package:Thinkpay/ui/pages/transections/Trasections.dart';
@@ -61,7 +61,7 @@ class ThinkPay extends StatelessWidget {
 
 final routes = <String, WidgetBuilder>{
   '/startup': (context) => StartupScreen(),
-  '/onboarding': (context) => const OnboardingPage(),
+  '/onboarding': (context) => const OnboardingFlow(),
   '/signup': (context) => const SignUp(),
   '/login': (context) => const Login(),
   '/forgetpass': (context) => const ForgotPassword(),

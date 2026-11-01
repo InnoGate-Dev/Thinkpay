@@ -397,14 +397,14 @@ class _LoginState extends State<Login> {
                 // Sign up prompt
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/signup'),
+                    onTap: () => Navigator.pushNamed(context, '/onboarding'),
                     child: RichText(
                       text: TextSpan(
                         style: AppTypography.bodySm.copyWith(color: tc.text70),
                         children: [
                           const TextSpan(text: "Don't have an account? "),
                           TextSpan(
-                            text: 'Join the 1%',
+                            text: 'Create Account',
                             style: TextStyle(
                               color: tc.intelligenceAccent,
                               fontWeight: FontWeight.w700,

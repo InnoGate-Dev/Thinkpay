@@ -45,9 +45,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (index) => setState(() => _currentStep = index),
-                children: [
-                  _WelcomeStep(onNext: _nextPage, tc: tc)
-                ],
+                children: [_WelcomeStep(onNext: _nextPage, tc: tc)],
               ),
             ),
           ],
@@ -116,7 +114,11 @@ class _WelcomeStep extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
-                  child: Icon(Icons.auto_awesome_rounded, color: tc.intelligenceAccent, size: 28),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: tc.intelligenceAccent,
+                    size: 28,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -163,8 +165,6 @@ class _WelcomeStep extends StatelessWidget {
   }
 }
 
-
-
 class _SuccessScreen extends StatelessWidget {
   final ThemeColors tc;
   const _SuccessScreen({required this.tc});
@@ -185,7 +185,11 @@ class _SuccessScreen extends StatelessWidget {
                   color: tc.intelligenceAccentDim,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.check_rounded, color: tc.intelligenceAccent, size: 48),
+                child: Icon(
+                  Icons.check_rounded,
+                  color: tc.intelligenceAccent,
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 32),
               Text(
@@ -201,7 +205,8 @@ class _SuccessScreen extends StatelessWidget {
               const SizedBox(height: 48),
               _PrimaryButton(
                 label: 'Go to Dashboard',
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/home'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/home'),
                 tc: tc,
               ),
             ],
@@ -211,8 +216,6 @@ class _SuccessScreen extends StatelessWidget {
     );
   }
 }
-
-
 
 class _PrimaryButton extends StatelessWidget {
   final String label;
