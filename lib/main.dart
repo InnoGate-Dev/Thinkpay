@@ -86,6 +86,6 @@ final routes = <String, WidgetBuilder>{
   '/community-profile-owner': (context) =>
       const CommunityProfilePage(isOwner: true),
   '/community-dashboard': (context) => const CommunityDashboardPage(),
-  '/credit-card-details': (context) => const AddCreditCardScreen(),
-  '/credit-card-list': (context) => const CreditCardListScreen(),
+  '/credit-card-details': (context) => AddCreditCardScreen(),
+  '/credit-card-list': (context) => CreditCardListScreen(),
 };

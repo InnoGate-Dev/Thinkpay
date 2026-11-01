@@ -498,119 +498,58 @@ class _CreditCardSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: tc.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: tc.border, width: 0.8),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: tc.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: tc.border.withValues(alpha: 0.5), width: 0.8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [tc.coreAction, Color.lerp(tc.coreAction, Colors.black, 0.25)!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.payment_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: tc.coreAction.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.credit_card_rounded, color: tc.coreAction, size: 16),
-                  ),
-                  const SizedBox(width: 10),
                   Text(
                     'Credit Cards',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       color: tc.text100,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
-              GestureDetector(
-                onTap: onTap,
-                child: Text(
-                  'Manage',
-                  style: GoogleFonts.inter(
-                    color: tc.coreAction,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: tc.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: tc.border.withValues(alpha: 0.5), width: 0.8),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [tc.coreAction, Color.lerp(tc.coreAction, Colors.black, 0.25)!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.payment_rounded, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Credit Card Details',
-                          style: GoogleFonts.inter(
-                            color: tc.text100,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Manage limit, interest rates, closing & due dates',
-                          style: GoogleFonts.inter(
-                            color: tc.text40,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 2),
+                  Text(
+                    'Manage limit, interest rates, closing & due dates',
+                    style: GoogleFonts.inter(
+                      color: tc.text40,
+                      fontSize: 11,
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: tc.text40, size: 20),
                 ],
               ),
             ),
-          ),
-        ],
+            Icon(Icons.chevron_right_rounded, color: tc.text40, size: 20),
+          ],
+        ),
       ),
     );
   }

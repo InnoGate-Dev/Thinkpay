@@ -2,70 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 
-// ── Model ─────────────────────────────────────────────────────────────────────
-// Only what the user types in. Payment due date is NOT stored: it is always
-// statement closing date + grace period, so we calculate it.
-class CreditCardDetails {
-  const CreditCardDetails({
-    required this.name,
-    required this.creditLimit,
-    required this.apr,
-    required this.statementDay,
-    required this.graceDays,
-  });
-
-  final String name;
-  final double creditLimit;
-  final double apr; // annual interest rate in %
-  final int statementDay; // 1-31, day of month the statement closes
-  final int graceDays; // days from statement close to payment due date
-
-  Map<String, dynamic> toMap() => {
-    'name': name,
-    'creditLimit': creditLimit,
-    'apr': apr,
-    'statementDay': statementDay,
-    'graceDays': graceDays,
-  };
-}
-
-// ── Date helpers ──────────────────────────────────────────────────────────────
-// Day 31 doesn't exist in every month, so clamp to the last day of the month.
-DateTime closeDateFor(int year, int month, int day) {
-  final lastDay = DateTime(year, month + 1, 0).day;
-  return DateTime(year, month, day > lastDay ? lastDay : day);
-}
-
-DateTime nextStatementClose(int day, DateTime today) {
-  final t = DateTime(today.year, today.month, today.day);
-  final thisMonth = closeDateFor(t.year, t.month, day);
-  if (!thisMonth.isBefore(t)) return thisMonth;
-  return closeDateFor(t.year, t.month + 1, day);
-}
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-String formatShortDate(DateTime d) => '${_months[d.month - 1]} ${d.day}';
+import '../../../core/errors/exceptions.dart';
+import '../../../model/credit_card_model.dart';
+import '../../../services/creditCardService.dart';
+import '../../../util/credit_card_format.dart';
 
 // ── Screen wrapper ────────────────────────────────────────────────────────────
+/// Creates a card, or edits [initial] when one is supplied.
+///
+/// Pops with the saved [CreditCardModel] so the caller can refresh its list.
 class AddCreditCardScreen extends StatelessWidget {
-  const AddCreditCardScreen({super.key, this.onSave});
+  AddCreditCardScreen({super.key, CreditCardService? service, this.initial})
+      : service = service ?? CreditCardService();
 
-  final ValueChanged<CreditCardDetails>? onSave;
+  final CreditCardService service;
+
+  /// Pass an existing card to use this screen for editing.
+  final CreditCardModel? initial;
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = initial != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add credit card')),
+      appBar: AppBar(
+        title: Text(isEditing ? 'Edit credit card' : 'Add credit card'),
+      ),
       body: SafeArea(
         child: AddCreditCardForm(
-          onSubmit: (card) {
-            onSave?.call(card);
-            Navigator.of(context).maybePop(card);
-          },
+          service: service,
+          initial: initial,
+          submitLabel: isEditing ? 'Save changes' : 'Save card',
         ),
       ),
     );
@@ -74,17 +41,17 @@ class AddCreditCardScreen extends StatelessWidget {
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 class AddCreditCardForm extends StatefulWidget {
-  const AddCreditCardForm({
+  AddCreditCardForm({
     super.key,
-    required this.onSubmit,
+    CreditCardService? service,
     this.initial,
     this.submitLabel = 'Save card',
-  });
+  }) : service = service ?? CreditCardService();
 
-  final ValueChanged<CreditCardDetails> onSubmit;
+  final CreditCardService service;
 
   /// Pass an existing card to use this form for editing.
-  final CreditCardDetails? initial;
+  final CreditCardModel? initial;
   final String submitLabel;
 
   @override
@@ -99,6 +66,9 @@ class _AddCreditCardFormState extends State<AddCreditCardForm> {
   late final TextEditingController _aprCtrl;
   late final TextEditingController _graceCtrl;
   int? _statementDay;
+
+  bool _submitting = false;
+  String? _error;
 
   static final _decimalFormatter =
   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'));
@@ -168,19 +138,47 @@ class _AddCreditCardFormState extends State<AddCreditCardForm> {
     return null;
   }
 
-  void _submit() {
+  // ── Submit ──
+  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    widget.onSubmit(
-      CreditCardDetails(
-        name: _nameCtrl.text.trim(),
-        creditLimit: double.parse(_limitCtrl.text),
-        apr: double.parse(_aprCtrl.text),
-        statementDay: _statementDay!,
-        graceDays: int.parse(_graceCtrl.text),
-      ),
+    final draft = CreditCardModel(
+      id: widget.initial?.id ?? 0,
+      name: _nameCtrl.text.trim(),
+      creditLimit: double.parse(_limitCtrl.text),
+      apr: double.parse(_aprCtrl.text),
+      statementDay: _statementDay!,
+      graceDays: int.parse(_graceCtrl.text),
     );
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      final saved = widget.initial == null
+          ? await widget.service.createCard(draft)
+          : await widget.service.updateCard(draft);
+      if (!mounted) return;
+      Navigator.of(context).pop(saved);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = _messageFor(e);
+      });
+    }
+  }
+
+  /// Surfaces the backend's validation message when there is one, otherwise
+  /// falls back to a generic failure line.
+  String _messageFor(Object error) {
+    if (error is ApiException) return error.message;
+    return widget.initial == null
+        ? 'Could not save the card. Please try again.'
+        : 'Could not update the card. Please try again.';
   }
 
   @override
@@ -259,7 +257,8 @@ class _AddCreditCardFormState extends State<AddCreditCardForm> {
             ),
             items: [
               for (var d = 1; d <= 31; d++)
-                DropdownMenuItem(value: d, child: Text('${_ordinal(d)} of every month')),
+                DropdownMenuItem(
+                    value: d, child: Text('${ordinalDay(d)} of every month')),
             ],
             onChanged: (v) => setState(() => _statementDay = v),
             validator: (v) => v == null ? 'Pick the closing day' : null,
@@ -287,29 +286,32 @@ class _AddCreditCardFormState extends State<AddCreditCardForm> {
             statementDay: _statementDay,
             graceDays: int.tryParse(_graceCtrl.text),
           ),
+
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _error!,
+              style: AppTypography.bodySm.copyWith(color: c.red),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
 
           ElevatedButton(
-            onPressed: _submit,
-            child: Text(widget.submitLabel),
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: c.onAccent,
+                    ),
+                  )
+                : Text(widget.submitLabel),
           ),
         ],
       ),
     );
-  }
-
-  static String _ordinal(int n) {
-    if (n >= 11 && n <= 13) return '${n}th';
-    switch (n % 10) {
-      case 1:
-        return '${n}st';
-      case 2:
-        return '${n}nd';
-      case 3:
-        return '${n}rd';
-      default:
-        return '${n}th';
-    }
   }
 }
 
@@ -330,8 +332,8 @@ class _DueDatePreview extends StatelessWidget {
     if (ready) {
       final close = nextStatementClose(statementDay!, DateTime.now());
       final due = close.add(Duration(days: graceDays!));
-      text = 'Next statement closes ${formatShortDate(close)}. '
-          'Payment due ${formatShortDate(due)}.';
+      text = 'Next statement closes ${fmtShortDate(close)}. '
+          'Payment due ${fmtShortDate(due)}.';
     }
 
     return Container(

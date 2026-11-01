@@ -48,6 +48,10 @@ class ApiEndpoints {
   static String loanById(int id) => '/loans/$id';
   static String loanPayments(int loanId) => '/loans/$loanId/payments';
 
+  // Credit Cards
+  static const String creditCards = '/credit-cards';
+  static String creditCardById(int id) => '/credit-cards/$id';
+
   // goal transaction
 
   static String getgoalTrasection() => '/goaltransactions';

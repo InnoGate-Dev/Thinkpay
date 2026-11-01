@@ -1,35 +1,11 @@
 import 'package:flutter/material.dart';
-
-// Adjust these imports to your project structure.
 import 'package:Thinkpay/core/constant/app_colors.dart';
 
+import '../../../core/errors/exceptions.dart';
+import '../../../model/credit_card_model.dart';
+import '../../../services/creditCardService.dart';
+import '../../../util/credit_card_format.dart';
 import 'creditcardDetails.dart';
-// ── Formatting helpers ────────────────────────────────────────────────────────
-String _money(double v) {
-  final fixed =
-  v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  final whole = parts[0]
-      .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
-  return 'Rs. ${parts.length > 1 ? '$whole.${parts[1]}' : whole}';
-}
-
-String _percent(double v) =>
-    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
-
-String _ordinal(int n) {
-  if (n >= 11 && n <= 13) return '${n}th';
-  switch (n % 10) {
-    case 1:
-      return '${n}st';
-    case 2:
-      return '${n}nd';
-    case 3:
-      return '${n}rd';
-    default:
-      return '${n}th';
-  }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 /// Lists the user's saved credit cards.
@@ -37,83 +13,72 @@ String _ordinal(int n) {
 ///   • ⋮ menu / sheet    → edit or delete
 ///   • + button          → add a new card
 ///
-/// The screen holds no state itself. Keep the list in your own state
-/// management (setState, Provider, Riverpod, Bloc...) and update it inside
-/// [onAdd], [onEdit] and [onDelete].
+/// Cards are loaded from `GET /credit-cards`. Adding, editing and deleting hit
+/// the matching endpoints and reload the list on success.
 class CreditCardListScreen extends StatefulWidget {
-  const CreditCardListScreen({
-    super.key,
-    this.cards,
-    this.onAdd,
-    this.onEdit,
-    this.onDelete,
-  });
+  CreditCardListScreen({super.key, CreditCardService? service})
+      : service = service ?? CreditCardService();
 
-  final List<CreditCardDetails>? cards;
-
-  /// New card from the form (id is null: assign one when you save it).
-  final ValueChanged<CreditCardDetails>? onAdd;
-
-  /// Edited card. It has the same id as the original.
-  final ValueChanged<CreditCardDetails>? onEdit;
-
-  /// Called after the user confirms deletion.
-  final ValueChanged<CreditCardDetails>? onDelete;
+  final CreditCardService service;
 
   @override
   State<CreditCardListScreen> createState() => _CreditCardListScreenState();
 }
 
 class _CreditCardListScreenState extends State<CreditCardListScreen> {
-  late List<CreditCardDetails> _cards;
+  late Future<List<CreditCardModel>> _future;
 
   @override
   void initState() {
     super.initState();
-    _cards = List.from(widget.cards ?? []);
+    _future = widget.service.fetchCards();
   }
 
-  @override
-  void didUpdateWidget(covariant CreditCardListScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.cards != null) {
-      _cards = List.from(widget.cards!);
-    }
+  Future<void> _reload() async {
+    final future = widget.service.fetchCards();
+    if (!mounted) return;
+    setState(() {
+      _future = future;
+    });
+    // Swallowed here on purpose: the FutureBuilder renders the error state.
+    try {
+      await future;
+    } catch (_) {}
   }
 
-  void _openAdd(BuildContext context) async {
-    final newCard = await Navigator.of(context).push<CreditCardDetails>(
-      MaterialPageRoute<CreditCardDetails>(
-        builder: (_) => AddCreditCardScreen(onSave: widget.onAdd),
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _openAdd() async {
+    final created = await Navigator.of(context).push<CreditCardModel>(
+      MaterialPageRoute<CreditCardModel>(
+        builder: (_) => AddCreditCardScreen(service: widget.service),
       ),
     );
-    if (newCard != null) {
-      widget.onAdd?.call(newCard);
-      setState(() {
-        _cards.add(newCard);
-      });
-    }
+    if (created == null) return;
+    await _reload();
+    _toast('${created.name} added');
   }
 
-  void _openEdit(BuildContext context, CreditCardDetails card) async {
-    final updatedCard = await Navigator.of(context).push<CreditCardDetails>(
-      MaterialPageRoute<CreditCardDetails>(
-        builder: (_) => _EditCreditCardScreen(card: card, onSave: widget.onEdit),
+  Future<void> _openEdit(CreditCardModel card) async {
+    final updated = await Navigator.of(context).push<CreditCardModel>(
+      MaterialPageRoute<CreditCardModel>(
+        builder: (_) => AddCreditCardScreen(
+          service: widget.service,
+          initial: card,
+        ),
       ),
     );
-    if (updatedCard != null) {
-      widget.onEdit?.call(updatedCard);
-      setState(() {
-        final index = _cards.indexOf(card);
-        if (index != -1) {
-          _cards[index] = updatedCard;
-        }
-      });
-    }
+    if (updated == null) return;
+    await _reload();
+    _toast('${updated.name} updated');
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, CreditCardDetails card) async {
+  Future<void> _confirmDelete(CreditCardModel card) async {
     final c = ThemeColors.of(context);
 
     final confirmed = await showDialog<bool>(
@@ -138,19 +103,19 @@ class _CreditCardListScreenState extends State<CreditCardListScreen> {
     );
 
     if (confirmed != true) return;
-    widget.onDelete?.call(card);
-    setState(() {
-      _cards.remove(card);
-    });
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${card.name} deleted')),
-      );
+    try {
+      await widget.service.deleteCard(card.id);
+      await _reload();
+      _toast('${card.name} deleted');
+    } catch (e) {
+      _toast(e is ApiException
+          ? e.message
+          : 'Could not delete the card. Please try again.');
     }
   }
 
-  void _showDetails(BuildContext context, CreditCardDetails card) {
+  void _showDetails(CreditCardModel card) {
     final c = ThemeColors.of(context);
 
     showModalBottomSheet<void>(
@@ -165,11 +130,11 @@ class _CreditCardListScreenState extends State<CreditCardListScreen> {
         card: card,
         onEdit: () {
           Navigator.of(sheetContext).pop();
-          _openEdit(context, card);
+          _openEdit(card);
         },
         onDelete: () {
           Navigator.of(sheetContext).pop();
-          _confirmDelete(context, card);
+          _confirmDelete(card);
         },
       ),
     );
@@ -179,70 +144,74 @@ class _CreditCardListScreenState extends State<CreditCardListScreen> {
   Widget build(BuildContext context) {
     final c = ThemeColors.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('My credit cards')),
-      floatingActionButton: _cards.isEmpty
-          ? null
-          : FloatingActionButton.extended(
-        onPressed: () => _openAdd(context),
-        backgroundColor: c.accent,
-        foregroundColor: c.onAccent,
-        icon: const Icon(Icons.add),
-        label: Text(
-          'Add card',
-          style: AppTypography.bodyMd
-              .copyWith(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: SafeArea(
-        child: _cards.isEmpty
-            ? _EmptyState(onAdd: () => _openAdd(context))
-            : ListView.separated(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.marginMobile,
-            AppSpacing.base,
-            AppSpacing.marginMobile,
-            96, // room for the floating button
+    return FutureBuilder<List<CreditCardModel>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final cards = snapshot.data ?? const <CreditCardModel>[];
+        final showFab =
+            snapshot.connectionState == ConnectionState.done && cards.isNotEmpty;
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('My credit cards')),
+          floatingActionButton: showFab
+              ? FloatingActionButton.extended(
+                  onPressed: _openAdd,
+                  backgroundColor: c.accent,
+                  foregroundColor: c.onAccent,
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    'Add card',
+                    style: AppTypography.bodyMd
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                )
+              : null,
+          body: SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _reload,
+              color: c.accent,
+              child: _buildBody(c, snapshot, cards),
+            ),
           ),
-          itemCount: _cards.length,
-          separatorBuilder: (_, _) =>
-          const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (context, i) {
-            final card = _cards[i];
-            return _CardTile(
-              card: card,
-              onTap: () => _showDetails(context, card),
-              onEdit: () => _openEdit(context, card),
-              onDelete: () => _confirmDelete(context, card),
-            );
-          },
-        ),
-      ),
+        );
+      },
     );
   }
-}
 
-// ── Edit screen (reuses the add form) ─────────────────────────────────────────
-class _EditCreditCardScreen extends StatelessWidget {
-  const _EditCreditCardScreen({required this.card, this.onSave});
-
-  final CreditCardDetails card;
-  final ValueChanged<CreditCardDetails>? onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Edit credit card')),
-      body: SafeArea(
-        child: AddCreditCardForm(
-          initial: card,
-          submitLabel: 'Save changes',
-          onSubmit: (updated) {
-            onSave?.call(updated);
-            Navigator.of(context).maybePop(updated);
-          },
-        ),
+  Widget _buildBody(
+    ThemeColors c,
+    AsyncSnapshot<List<CreditCardModel>> snapshot,
+    List<CreditCardModel> cards,
+  ) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Center(
+        child: CircularProgressIndicator(color: c.accent),
+      );
+    }
+    if (snapshot.hasError) {
+      return _ErrorState(onRetry: _reload);
+    }
+    if (cards.isEmpty) {
+      return _EmptyState(onAdd: _openAdd);
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.marginMobile,
+        AppSpacing.base,
+        AppSpacing.marginMobile,
+        96, // room for the floating button
       ),
+      itemCount: cards.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, i) {
+        final card = cards[i];
+        return _CardTile(
+          card: card,
+          onTap: () => _showDetails(card),
+          onEdit: () => _openEdit(card),
+          onDelete: () => _confirmDelete(card),
+        );
+      },
     );
   }
 }
@@ -258,7 +227,7 @@ class _CardTile extends StatelessWidget {
     required this.onDelete,
   });
 
-  final CreditCardDetails card;
+  final CreditCardModel card;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -330,7 +299,7 @@ class _CardTile extends StatelessWidget {
                   style: AppTypography.labelCaps.copyWith(color: c.text40)),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                _money(card.creditLimit),
+                fmtCardMoney(card.creditLimit),
                 style: AppTypography.headlineLgMobile
                     .copyWith(color: c.text100),
               ),
@@ -341,11 +310,11 @@ class _CardTile extends StatelessWidget {
                 children: [
                   _InfoChip(
                     icon: Icons.percent,
-                    text: '${_percent(card.apr)}% p.a.',
+                    text: '${fmtApr(card.apr)}% p.a.',
                   ),
                   _InfoChip(
                     icon: Icons.event_outlined,
-                    text: 'Closes ${_ordinal(card.statementDay)}',
+                    text: 'Closes ${ordinalDay(card.statementDay)}',
                   ),
                   _InfoChip(
                     icon: Icons.schedule,
@@ -398,7 +367,7 @@ class _CardDetailsSheet extends StatelessWidget {
     required this.onDelete,
   });
 
-  final CreditCardDetails card;
+  final CreditCardModel card;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -406,8 +375,8 @@ class _CardDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = ThemeColors.of(context);
 
-    final nextClose = nextStatementClose(card.statementDay, DateTime.now());
-    final due = nextClose.add(Duration(days: card.graceDays));
+    final nextClose = card.nextCloseDate();
+    final due = card.nextDueDate();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -420,21 +389,23 @@ class _CardDetailsSheet extends StatelessWidget {
             Text(card.name,
                 style: AppTypography.headlineMd.copyWith(color: c.text100)),
             const SizedBox(height: AppSpacing.sm),
-            _DetailRow(label: 'Card limit', value: _money(card.creditLimit)),
             _DetailRow(
-                label: 'Interest rate', value: '${_percent(card.apr)}% per year'),
+                label: 'Card limit', value: fmtCardMoney(card.creditLimit)),
+            _DetailRow(
+                label: 'Interest rate',
+                value: '${fmtApr(card.apr)}% per year'),
             _DetailRow(
                 label: 'Statement closes',
-                value: '${_ordinal(card.statementDay)} of every month'),
+                value: '${ordinalDay(card.statementDay)} of every month'),
             _DetailRow(
                 label: 'Grace period', value: '${card.graceDays} days'),
             Divider(color: c.divider, height: AppSpacing.md * 2),
             _DetailRow(
                 label: 'Next statement closes',
-                value: formatShortDate(nextClose)),
+                value: fmtShortDate(nextClose)),
             _DetailRow(
                 label: 'Payment due for that statement',
-                value: formatShortDate(due)),
+                value: fmtShortDate(due)),
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
@@ -512,37 +483,82 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = ThemeColors.of(context);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration:
-              BoxDecoration(color: c.accentDim, shape: BoxShape.circle),
-              child: Icon(Icons.credit_card, size: 32, color: c.text100),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text('No credit cards yet',
-                style: AppTypography.headlineMd.copyWith(color: c.text100)),
-            const SizedBox(height: AppSpacing.base),
-            Text(
-              'Add a card to track your limit, due dates and payments.',
-              textAlign: TextAlign.center,
-              style: AppTypography.bodySm.copyWith(color: c.text70),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('Add credit card'),
-            ),
-          ],
+    // A ListView (not Center) so pull-to-refresh still works when empty.
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration:
+            BoxDecoration(color: c.accentDim, shape: BoxShape.circle),
+            child: Icon(Icons.credit_card, size: 32, color: c.text100),
+          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.md),
+        Center(
+          child: Text('No credit cards yet',
+              style: AppTypography.headlineMd.copyWith(color: c.text100)),
+        ),
+        const SizedBox(height: AppSpacing.base),
+        Center(
+          child: Text(
+            'Add a card to track your limit, due dates and payments.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodySm.copyWith(color: c.text70),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            label: const Text('Add credit card'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Error state ───────────────────────────────────────────────────────────────
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ThemeColors.of(context);
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+        Icon(Icons.error_outline, size: 48, color: c.red),
+        const SizedBox(height: AppSpacing.md),
+        Center(
+          child: Text('Could not load your cards',
+              style: AppTypography.headlineMd.copyWith(color: c.text100)),
+        ),
+        const SizedBox(height: AppSpacing.base),
+        Center(
+          child: Text(
+            'Check your connection and try again.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodySm.copyWith(color: c.text70),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Center(
+          child: OutlinedButton(
+            onPressed: () => onRetry(),
+            child: const Text('Retry'),
+          ),
+        ),
+      ],
     );
   }
 }
