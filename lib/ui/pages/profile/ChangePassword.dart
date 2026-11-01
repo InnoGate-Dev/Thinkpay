@@ -46,6 +46,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: ThemeColors.of(context).red));
   }
 
+  void _openForgotPassword() => Navigator.pushNamed(context, '/forgetpass');
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -56,6 +58,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         key: _formKey,
         child: ListView(padding: const EdgeInsets.all(20), children: [
           _field('Current password', _current, tc, validator: (v) => v == null || v.isEmpty ? 'Enter your current password' : null),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _openForgotPassword,
+              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: Text('Forgot password?', style: AppTypography.bodySm.copyWith(color: tc.intelligenceAccent, fontWeight: FontWeight.w600)),
+            ),
+          ),
           const SizedBox(height: 16),
           _field('New password', _next, tc, validator: (v) => v == null || v.length < 8 ? 'Use at least 8 characters' : null),
           const SizedBox(height: 16),
