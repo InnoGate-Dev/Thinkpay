@@ -78,4 +78,27 @@ class LoanRepository {
     );
     return await _loanService.addPayment(draft);
   }
+
+  /// Updates an existing repayment record.
+  Future<LoanPaymentModel> updateLoanPayment({
+    required int loanId,
+    required int paymentId,
+    required double amount,
+    required DateTime paidAt,
+  }) async {
+    return await _loanService.updatePayment(
+      loanId,
+      paymentId,
+      amount: amount,
+      paidAt: paidAt,
+    );
+  }
+
+  /// Deletes an existing repayment record.
+  Future<void> deleteLoanPayment({
+    required int loanId,
+    required int paymentId,
+  }) async {
+    await _loanService.deletePayment(loanId, paymentId);
+  }
 }

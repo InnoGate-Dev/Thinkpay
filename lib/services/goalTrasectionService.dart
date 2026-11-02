@@ -29,7 +29,7 @@ class Goaltrasectionservice {
       'transaction_date': transactionDateTime.toUtc().toIso8601String(),
     };
     final response = await _apiClient.post(
-      ApiEndpoints.CreateGoalTrasection(),
+      ApiEndpoints.goalTrasections,
       data: data,
     );
     if (response is Map<String, dynamic> && response.containsKey('data')) {
@@ -38,17 +38,17 @@ class Goaltrasectionservice {
     return response as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateTrasectionsByGoal(
-    int goalId, {
+  Future<Map<String, dynamic>> updateGoalTrasection(
+    int id, {
     required String amount,
     required DateTime transactionDateTime,
   }) async {
     final data = {
       'amount': amount,
-      'transaction_date': transactionDateTime.toIso8601String(),
+      'transaction_date': transactionDateTime.toUtc().toIso8601String(),
     };
     final response = await _apiClient.put(
-      ApiEndpoints.UpdateGoalTrasections(goalId),
+      ApiEndpoints.goalTrasectionById(id),
       data: data,
     );
     if (response is Map<String, dynamic> && response.containsKey('data')) {
@@ -57,7 +57,7 @@ class Goaltrasectionservice {
     return response as Map<String, dynamic>;
   }
 
-  Future<void> deleteTrasectionsByGoal(int goalId) async {
-    await _apiClient.delete(ApiEndpoints.DeleteGoalTrasections(goalId));
+  Future<void> deleteGoalTrasection(int id) async {
+    await _apiClient.delete(ApiEndpoints.goalTrasectionById(id));
   }
 }

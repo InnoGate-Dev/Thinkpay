@@ -48,6 +48,8 @@ class ApiEndpoints {
   static const String loans = '/loans';
   static String loanById(int id) => '/loans/$id';
   static String loanPayments(int loanId) => '/loans/$loanId/payments';
+  static String loanPaymentById(int loanId, int id) =>
+      '/loans/$loanId/payments/$id';
 
   // Credit Cards
   static const String creditCards = '/credit-cards';
@@ -55,10 +57,13 @@ class ApiEndpoints {
 
   // goal transaction
 
-  static String getgoalTrasection() => '/goaltransactions';
-  static String CreateGoalTrasection() => '/goaltransactions';
-  static String UpdateGoalTrasections(int goalId) => '/goaltransactions/$goalId';
-  static String DeleteGoalTrasections(int goalId) => '/goaltransactions/$goalId';
+  static const String goalTrasections = '/goaltransactions';
+
+  static String getgoalTrasection() => goalTrasections;
+
+  /// Single goal-transaction resource. Note the path id is the *transaction*
+  /// id, not the goal id — the route is `PUT|DELETE /goaltransactions/{id}`.
+  static String goalTrasectionById(int id) => '/goaltransactions/$id';
 
   // Notifications
   static const String notifications = '/notifications';

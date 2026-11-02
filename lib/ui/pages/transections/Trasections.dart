@@ -11,6 +11,7 @@ import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 import 'package:Thinkpay/ui/component/amount_text.dart';
 import 'package:Thinkpay/ui/component/transaction_detail_sheet.dart';
+import 'package:Thinkpay/ui/component/transaction_edit_sheet.dart';
 
 import '../../../core/repository/categoryRepo.dart';
 import '../../../core/repository/goalRepo.dart';
@@ -121,6 +122,9 @@ class _TransectionState extends State<Transection> {
           type: t.type,
           date: t.date,
           source: _TxSource.regular,
+          recordId: t.id,
+          categoryId: t.categoryId,
+          goalId: t.goalId,
           recordedAt: t.createdAt,
           goal: t.goalId == null ? null : goalsById[t.goalId],
         ));
@@ -145,6 +149,7 @@ class _TransectionState extends State<Transection> {
           type: TransactionType.transferOut,
           date: date,
           source: _TxSource.goal,
+          recordId: int.tryParse(raw['id']?.toString() ?? ''),
           reference: goalName,
           goal: goal,
         ));
@@ -164,6 +169,8 @@ class _TransectionState extends State<Transection> {
             type: TransactionType.transferOut,
             date: payment.paidAt,
             source: _TxSource.loan,
+            recordId: payment.id,
+            loanId: loan.id,
             reference: loan.purpose,
             installment: loan.loanDurationMonths > 0
                 ? '${i + 1} of ${loan.loanDurationMonths}'
@@ -237,11 +244,126 @@ class _TransectionState extends State<Transection> {
 
   void _openDetail(_UnifiedTx t) {
     final tc = ThemeColors.of(context);
+    // Records whose own backend id did not arrive cannot be addressed by the
+    // edit / delete routes, so the sheet falls back to read-only.
+    final draft = t.toEditDraft();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => TransactionDetailSheet(data: t.toDetailData(tc)),
+      builder: (_) => TransactionDetailSheet(
+        data: t.toDetailData(tc),
+        onEdit: draft == null ? null : () => _editTx(draft),
+        onDelete: draft == null ? null : () => _deleteTx(t),
+      ),
+    );
+  }
+
+  /// Opens the edit form for [draft] and reloads the ledger once the backend
+  /// record actually changed.
+  Future<void> _editTx(TransactionEditDraft draft) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TransactionEditSheet(draft: draft),
+    );
+    if (changed != true || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transaction updated.')),
+    );
+    await _loadTrasections();
+  }
+
+  /// Confirms, deletes and refreshes. Routes to the table the row belongs to;
+  /// goal transfers also roll their amount back out of the goal's saved total,
+  /// because `goaltrasections` does not touch the goal balance server-side.
+  Future<void> _deleteTx(_UnifiedTx t) async {
+    final confirmed = await _confirmDelete(t);
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      switch (t.source) {
+        case _TxSource.regular:
+          await _transactionRepo.deleteTransaction(t.recordId!);
+        case _TxSource.goal:
+          await _goalTransactionRepo.deleteGoalTrasection(t.recordId!);
+          final goal = t.goal;
+          if (goal != null && t.amount > 0) {
+            final updated =
+                await _goalRepo.addAmountToGoal(goal.id, -t.amount, goal);
+            _provider.addAmountToGoal(goal.id, updated.savedAmount);
+          }
+        case _TxSource.loan:
+          await _loanRepo.deleteLoanPayment(
+            loanId: t.loanId!,
+            paymentId: t.recordId!,
+          );
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('${t.recordRef} deleted.')),
+      );
+      await _loadTrasections();
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Delete failed: $e'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _confirmDelete(_UnifiedTx t) {
+    final tc = ThemeColors.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: tc.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Delete this record?',
+          style: GoogleFonts.manrope(
+            color: tc.text100,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '${t.category} · ${groupedMoney(t.amount)} will be removed '
+          'permanently. This cannot be undone.',
+          style: GoogleFonts.inter(
+            color: tc.text70,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: tc.text40, fontSize: 13),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(
+                color: tc.accentExpense,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -531,6 +653,10 @@ class _UnifiedTx {
     required this.type,
     required this.date,
     required this.source,
+    this.recordId,
+    this.categoryId,
+    this.goalId,
+    this.loanId,
     this.reference,
     this.installment,
     this.recordedAt,
@@ -544,6 +670,20 @@ class _UnifiedTx {
   final TransactionType type;
   final DateTime date;
   final _TxSource source;
+
+  /// Id of the row in its own backend table. `null` when the API did not send
+  /// one, which also disables edit and delete for that row.
+  final int? recordId;
+
+  /// `category_id` of a regular transaction — `PUT /transactions/{id}` requires
+  /// one on every update.
+  final int? categoryId;
+
+  /// Goal attached to a regular TRANSFER row, preserved on save.
+  final int? goalId;
+
+  /// Parent loan of a payment row.
+  final int? loanId;
 
   /// Goal name / loan purpose this record belongs to, when it has one.
   final String? reference;
@@ -665,6 +805,34 @@ class _UnifiedTx {
       if (goal != null) _goalTypeLabel(goal!.type),
     ].join(' ').toLowerCase();
     return haystack.contains(query);
+  }
+
+  /// Payload for [TransactionEditSheet], or `null` when this record cannot be
+  /// addressed by an update or delete route.
+  TransactionEditDraft? toEditDraft() {
+    final record = recordId;
+    if (record == null) return null;
+    if (source == _TxSource.loan && loanId == null) return null;
+
+    return TransactionEditDraft(
+      kind: switch (source) {
+        _TxSource.regular => TransactionRecordKind.transaction,
+        _TxSource.goal => TransactionRecordKind.goalTransfer,
+        _TxSource.loan => TransactionRecordKind.loanPayment,
+      },
+      recordId: record,
+      recordRef: recordRef,
+      title: category,
+      amount: amount,
+      date: date,
+      type: type,
+      // `ApiTransaction` defaults a missing id to 0; the update route needs a
+      // real one, so a zero is treated as absent and the user has to pick.
+      categoryId: (categoryId ?? 0) > 0 ? categoryId : null,
+      goalId: goalId,
+      goal: goal,
+      loanId: loanId,
+    );
   }
 
   /// Expands this row into the payload of [TransactionDetailSheet].

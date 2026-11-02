@@ -150,6 +150,10 @@ class TransactionRepository {
   }
 
   /// Updates an existing transaction.
+  ///
+  /// [apiType] overrides the API literal sent for [type]; the UI enum collapses
+  /// `transferIn`/`transferOut` onto `INCOME`/`EXPENSE`, which would silently
+  /// turn a TRANSFER row into a plain expense when editing it.
   Future<ApiTransaction> updateTransaction(
     int id, {
     required int categoryId,
@@ -157,6 +161,7 @@ class TransactionRepository {
     required double amount,
     required DateTime date,
     int? goalId,
+    String? apiType,
   }) async {
     final raw = await _transactionService.updateTransaction(
       id,
@@ -165,6 +170,7 @@ class TransactionRepository {
       amount: amount.toStringAsFixed(2),
       date: date.toUtc(),
       goalId: goalId,
+      apiType: apiType,
     );
     return ApiTransaction.fromJson(raw);
   }

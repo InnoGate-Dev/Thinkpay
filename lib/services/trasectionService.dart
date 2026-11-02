@@ -55,10 +55,11 @@ class TransactionService {
     required String amount,
     required DateTime date,
     int? goalId,
+    String? apiType,
   }) async {
     final data = {
       'category_id': categoryId,
-      'type': type,
+      'type': apiType ?? type,
       'amount': amount,
       'date': date.toIso8601String(),
       'goal_id': goalId,

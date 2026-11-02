@@ -30,21 +30,21 @@ class GoalTrasectionRepository {
     );
   }
 
-  /// Updates goal transactions by goal ID.
-  Future<Map<String, dynamic>> updateTrasectionsByGoal(
-    int goalId, {
+  /// Updates a single goal transaction by its own [id].
+  Future<Map<String, dynamic>> updateGoalTrasection(
+    int id, {
     required double amount,
     required DateTime transactionDateTime,
   }) async {
-    return await _goalTrasectionService.updateTrasectionsByGoal(
-      goalId,
+    return await _goalTrasectionService.updateGoalTrasection(
+      id,
       amount: amount.toStringAsFixed(2),
       transactionDateTime: transactionDateTime,
     );
   }
 
-  /// Deletes goal transactions by goal ID.
-  Future<void> deleteTrasectionsByGoal(int goalId) async {
-    await _goalTrasectionService.deleteTrasectionsByGoal(goalId);
+  /// Deletes a single goal transaction by its own [id].
+  Future<void> deleteGoalTrasection(int id) async {
+    await _goalTrasectionService.deleteGoalTrasection(id);
   }
 }

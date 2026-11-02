@@ -62,11 +62,26 @@ class TransactionDetailData {
 ///
 /// Keeps the list row scannable while still letting the user confirm exactly
 /// what a record is: type, category, goal/loan reference, timestamps and the
-/// backend record id.
+/// backend record id. When [onEdit] / [onDelete] are supplied, the sheet closes
+/// itself and hands control back to the caller, which owns the confirmation
+/// and the network calls.
 class TransactionDetailSheet extends StatelessWidget {
-  const TransactionDetailSheet({super.key, required this.data});
+  const TransactionDetailSheet({
+    super.key,
+    required this.data,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final TransactionDetailData data;
+
+  /// Opens the edit form. The sheet is already dismissed when this runs.
+  final VoidCallback? onEdit;
+
+  /// Starts the delete flow. The sheet is already dismissed when this runs.
+  final VoidCallback? onDelete;
+
+  bool get _hasActions => onEdit != null || onDelete != null;
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +307,45 @@ class TransactionDetailSheet extends StatelessWidget {
               ),
             ],
 
+            // ── Edit / Delete ─────────────────────────────────────────────
+            if (_hasActions) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  if (onEdit != null)
+                    Expanded(
+                      child: _SheetAction(
+                        label: 'Edit',
+                        icon: Icons.edit_outlined,
+                        color: tc.background,
+                        background: tc.coreAction,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onEdit!();
+                        },
+                      ),
+                    ),
+                  if (onEdit != null && onDelete != null)
+                    const SizedBox(width: AppSpacing.base),
+                  if (onDelete != null)
+                    Expanded(
+                      child: _SheetAction(
+                        label: 'Delete',
+                        icon: Icons.delete_outline_rounded,
+                        color: tc.accentExpense,
+                        background:
+                            tc.accentExpense.withValues(alpha: 0.1),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onDelete!();
+                        },
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.base),
+            ],
+
             // ── Close ─────────────────────────────────────────────────────
             const SizedBox(height: AppSpacing.md),
             SizedBox(
@@ -319,6 +373,52 @@ class TransactionDetailSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Sheet action ──────────────────────────────────────────────────────────────
+/// Full-width pill used for the Edit / Delete pair.
+class _SheetAction extends StatelessWidget {
+  const _SheetAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color background;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 48,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            backgroundColor: background,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: AppSpacing.base),
+              Text(
+                label,
+                style: AppTypography.bodySm.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 // ── Badge ─────────────────────────────────────────────────────────────────────

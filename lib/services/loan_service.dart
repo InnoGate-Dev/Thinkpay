@@ -100,5 +100,37 @@ class LoanService {
     }
     throw Exception('Unexpected response format when adding payment');
   }
+
+  /// Updates an existing repayment record via
+  /// `PUT /loans/{loanId}/payments/{paymentId}`.
+  Future<LoanPaymentModel> updatePayment(
+    int loanId,
+    int paymentId, {
+    required double amount,
+    required DateTime paidAt,
+  }) async {
+    final draft = LoanPaymentModel(
+      id: paymentId,
+      loanId: loanId,
+      amount: amount,
+      paidAt: paidAt,
+    );
+    final response = await _apiClient.put(
+      ApiEndpoints.loanPaymentById(loanId, paymentId),
+      data: draft.toCreateJson(),
+    );
+    if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response;
+      final json = data is List ? data.first : data;
+      return LoanPaymentModel.fromJson(json as Map<String, dynamic>);
+    }
+    throw Exception('Unexpected response format when updating payment');
+  }
+
+  /// Deletes a repayment record via
+  /// `DELETE /loans/{loanId}/payments/{paymentId}`.
+  Future<void> deletePayment(int loanId, int paymentId) async {
+    await _apiClient.delete(ApiEndpoints.loanPaymentById(loanId, paymentId));
+  }
 }
 
