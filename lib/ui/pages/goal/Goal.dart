@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/repository/goalRepo.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_goal_sheet.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 import 'package:Thinkpay/ui/pages/goal/Completed_goal.dart';
 
 class SetGoalPage extends StatefulWidget {
@@ -291,11 +293,7 @@ class _GoalOverviewTab extends StatefulWidget {
 class _GoalOverviewTabState extends State<_GoalOverviewTab> {
   ThemeColors get tc => widget.tc;
 
-  String _fmt(double v) {
-    if (v >= 1e6) return 'Rs. ${(v / 1e6).toStringAsFixed(1)}M';
-    if (v >= 1e3) return 'Rs. ${(v / 1e3).toStringAsFixed(1)}K';
-    return 'Rs. ${v.toStringAsFixed(0)}';
-  }
+  String _fmt(double v) => compactMoney(v);
 
   @override
   Widget build(BuildContext context) {
@@ -978,14 +976,16 @@ class _SpotlightGoalRow extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Rs. ${goal.savedAmount.toStringAsFixed(0)} of Rs. ${goal.targetAmount.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      color: tc.text40,
-                      fontSize: 11,
+                  Expanded(
+                    child: AmountText(
+                      '${compactMoney(goal.savedAmount)} of ${compactMoney(goal.targetAmount)}',
+                      style: GoogleFonts.inter(
+                        color: tc.text40,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
-                  if (!goal.isCompleted)
+                  if (!goal.isCompleted) ...[
                     Text(
                       'Tap to add',
                       style: GoogleFonts.inter(
@@ -994,6 +994,7 @@ class _SpotlightGoalRow extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ],
                 ],
               ),
             ],
@@ -1277,7 +1278,7 @@ class _GoalCard extends StatelessWidget {
   String get _typeLabel =>
       goal.type == GoalType.savings ? 'Savings' : 'Investment';
 
-  String _fmt(double v) => 'Rs. ${v.toStringAsFixed(0)}';
+  String _fmt(double v) => compactMoney(v);
 
   void _openAddAmount(BuildContext context) async {
     if (goal.isCompleted) return;

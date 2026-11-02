@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/onboarding/onboarding_draft.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 import 'package:Thinkpay/ui/pages/onboarding/sheets/money_editor_sheet.dart';
 import 'package:Thinkpay/ui/pages/onboarding/widgets/onboarding_scaffold.dart';
 import 'package:Thinkpay/ui/pages/onboarding/widgets/onboarding_widgets.dart';
@@ -201,13 +202,16 @@ class _MoneyListStepState extends State<MoneyListStep> {
                 widget.isIncome ? 'Monthly income' : 'Monthly spend',
                 style: AppTypography.bodySm.copyWith(color: tc.text70),
               ),
-              const Spacer(),
-              Text(
-                '$symbol ${formatMoney(_total)}',
-                style: AppTypography.dataMono.copyWith(
-                  color: tc.text100,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AmountText(
+                  moneyText(_total, symbol),
+                  textAlign: TextAlign.right,
+                  style: AppTypography.dataMono.copyWith(
+                    color: tc.text100,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
@@ -259,8 +263,8 @@ class _MoneyTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '$symbol${formatMoney(item.amount, decimals: decimals)}',
+                AmountText(
+                  moneyText(item.amount, symbol, decimals: decimals),
                   style: AppTypography.dataMono.copyWith(
                     color: accent,
                     fontSize: 16,
@@ -318,7 +322,7 @@ class _ExpenseInsight extends StatelessWidget {
       icon: Icons.savings_outlined,
       tone: NoteTone.positive,
       text:
-          'You keep $symbol${formatMoney(draft.monthlyKeep)} '
+          'You keep ${moneyText(draft.monthlyKeep, symbol)} '
           '($percent%) each month.',
     );
   }

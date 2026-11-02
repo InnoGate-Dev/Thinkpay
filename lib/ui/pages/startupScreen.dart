@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:Thinkpay/core/utils/number_format.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
+
 /// DayOne – redesigned startup screen.
 ///
 /// Design notes
@@ -281,14 +284,13 @@ class _Hero extends StatelessWidget {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-String _money(double v, {int decimals = 2}) {
-  final parts = v.toStringAsFixed(decimals).split('.');
-  final whole = parts[0].replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-        (_) => ',',
-  );
-  return decimals == 0 ? '\$$whole' : '\$$whole.${parts[1]}';
-}
+/// Hero money: every digit while it fits, abbreviated once it doesn't
+/// ($1,250.00 → $1.25M).
+String _money(double v, {int decimals = 2}) => compactMoney(
+      v,
+      symbol: r'$',
+      decimals: v.abs() < kCompactThreshold ? decimals : null,
+    );
 
 List<double> _lerpList(List<double> a, List<double> b, double t) => [
   for (var i = 0; i < a.length; i++) lerpDouble(a[i], b[i], t)!,
@@ -472,7 +474,7 @@ class _BalanceCardState extends State<_BalanceCard>
                   opacity: anim,
                   child: child,
                 ),
-                child: Text(
+                child: AmountText(
                   _hidden ? '••••••' : _money(shownValue),
                   key: ValueKey(_hidden),
                   style: GoogleFonts.manrope(

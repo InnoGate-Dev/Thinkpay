@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
-import 'package:Thinkpay/ui/pages/home/home_helpers.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 
 // ── Balance card ──────────────────────────────────────────────────────────────
 class BalanceCard extends StatelessWidget {
@@ -94,8 +95,8 @@ class BalanceCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            'Rs. ${formatAmount(balance)}',
+                          AmountText(
+                            compactMoney(balance),
                             style: GoogleFonts.manrope(
                               color: tc.text100,
                               fontSize: 28,
@@ -278,16 +279,14 @@ class _StatColumn extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                'Rs. ${formatAmount(amount)}',
+              AmountText(
+                compactMoney(amount),
                 style: GoogleFonts.manrope(
                   color: tc.text100,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.3,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -130,7 +130,7 @@ class _CountryStepState extends State<CountryStep> {
           ),
           const SizedBox(height: AppSpacing.base),
           Text(
-            'Amounts will be shown as $symbol${formatMoney(1250, decimals: 0)}',
+            'Amounts will be shown as ${moneyText(1250, symbol, decimals: 0)}',
             style: AppTypography.bodySm.copyWith(
               color: tc.text40,
               fontSize: 11,

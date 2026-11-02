@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 
 class MetricCard extends StatelessWidget {
   const MetricCard({
@@ -50,7 +51,7 @@ class MetricCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(label, style: GoogleFonts.inter(color: tc.text40, fontSize: 11, fontWeight: FontWeight.w500)),
           const SizedBox(height: 3),
-          Text(
+          AmountText(
             value,
             style: GoogleFonts.manrope(
               color: accentColor,

@@ -2,7 +2,9 @@ import 'package:Thinkpay/core/repository/goalTrasection.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constant/app_colors.dart';
+import '../../core/utils/number_format.dart';
 import '../../core/repository/goalRepo.dart';
+import 'amount_text.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:lottie/lottie.dart';
@@ -341,7 +343,7 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
         SnackBar(
           content: Text(
             'Amount exceeds remaining balance '
-            '(Rs. ${remaining.toStringAsFixed(2)}). '
+            '(${compactMoney(remaining)}). '
             'Please enter a smaller amount.',
           ),
           backgroundColor: ThemeColors.of(context).red,
@@ -472,15 +474,20 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Saved: Rs. ${widget.goal.savedAmount.toStringAsFixed(2)}',
-                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    Expanded(
+                      child: AmountText(
+                        'Saved: ${compactMoney(widget.goal.savedAmount)}',
+                        style: TextStyle(color: tc.text70, fontSize: 12),
+                      ),
                     ),
-                    Text(
-                      'Target: Rs. ${widget.goal.targetAmount.toStringAsFixed(2)}',
-                      style: TextStyle(color: tc.text70, fontSize: 12),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AmountText(
+                        'Target: ${compactMoney(widget.goal.targetAmount)}',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(color: tc.text70, fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -495,10 +502,10 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
+                AmountText(
                   remaining <= 0
                       ? 'Goal already complete! 🎉'
-                      : 'Remaining: Rs. ${remaining.toStringAsFixed(2)}',
+                      : 'Remaining: ${compactMoney(remaining)}',
                   style: TextStyle(
                     color: remaining <= 0 ? tc.lime : tc.text40,
                     fontSize: 12,
@@ -778,12 +785,15 @@ void showGoalCompletedDialog(BuildContext context, GoalModel goal) {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      Text(
-                        'Rs. ${goal.savedAmount.toStringAsFixed(0)}',
-                        style: GoogleFonts.manrope(
-                          color: tc.coreAction,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                      Flexible(
+                        child: AmountText(
+                          compactMoney(goal.savedAmount),
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.manrope(
+                            color: tc.coreAction,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],

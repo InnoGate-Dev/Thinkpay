@@ -226,7 +226,7 @@ class _LoanEditorSheetState extends State<_LoanEditorSheet> {
             summary:
                 '${fmtPercent(parseMoney(_rateCtrl.text) ?? 0)}% · '
                 '$_duration months · '
-                '$symbol${formatMoney(_monthly, decimals: 0)}/month',
+                '${moneyText(_monthly, symbol, decimals: 0)}/month',
             onTap: () => setState(() => _showDetails = !_showDetails),
           ),
           if (_showDetails) ...[
@@ -453,17 +453,17 @@ class _DerivedBox extends StatelessWidget {
           _row(
             tc,
             'Original',
-            '$symbol ${formatMoney(principal, decimals: 0)}',
+            moneyText(principal, symbol, decimals: 0),
           ),
           const SizedBox(height: 6),
-          _row(tc, 'Paid so far', '$symbol ${formatMoney(paid, decimals: 0)}'),
+          _row(tc, 'Paid so far', moneyText(paid, symbol, decimals: 0)),
           const SizedBox(height: AppSpacing.base),
           Divider(height: 1, color: tc.divider),
           const SizedBox(height: AppSpacing.base),
           _row(
             tc,
             'Remaining',
-            '$symbol ${formatMoney(remaining, decimals: 0)}',
+            moneyText(remaining, symbol, decimals: 0),
             highlight: true,
           ),
         ],

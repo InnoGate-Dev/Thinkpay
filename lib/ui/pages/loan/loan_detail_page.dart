@@ -6,6 +6,7 @@ import '../../../model/loan_model.dart';
 import '../../../services/loan_service.dart';
 import '../../../util/loan_format.dart';
 import '../../component/arc_progress_ring.dart';
+import '../../component/amount_text.dart';
 import '../../component/breakdown_card.dart';
 import '../../component/info_card.dart';
 import '../../component/metric_card.dart';
@@ -271,14 +272,14 @@ class _DetailHeroCard extends StatelessWidget {
               children: [
                 Text('Total Payable', style: GoogleFonts.inter(color: tc.text40, fontSize: 11)),
                 const SizedBox(height: 3),
-                Text(
+                AmountText(
                   fmtRs(loan.totalPayable),
                   style: GoogleFonts.manrope(color: tc.text100, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
                 ),
                 const SizedBox(height: 10),
-                Text('Paid: ${fmtRs(loan.amountPaid)}', style: GoogleFonts.inter(color: tc.coreAction, fontSize: 12, fontWeight: FontWeight.w600)),
+                AmountText('Paid: ${fmtRs(loan.amountPaid)}', style: GoogleFonts.inter(color: tc.coreAction, fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text('Remaining: ${fmtRs(loan.remainingBalance)}', style: GoogleFonts.inter(color: tc.text40, fontSize: 12)),
+                AmountText('Remaining: ${fmtRs(loan.remainingBalance)}', style: GoogleFonts.inter(color: tc.text40, fontSize: 12)),
               ],
             ),
           ),

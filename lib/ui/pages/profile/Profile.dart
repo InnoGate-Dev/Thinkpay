@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/constant/theme_provider.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
@@ -145,13 +146,13 @@ class _ProfileState extends State<Profile> {
               Row(children: [
                 _StatCard(label: 'Transactions', value: '$txCount', icon: Icons.receipt_long_rounded, tc: tc),
                 const SizedBox(width: 12),
-                _StatCard(label: 'Balance', value: 'Rs. ${_fmt(balance)}', icon: Icons.account_balance_wallet_rounded, valueColor: balance >= 0 ? tc.lime : tc.red, tc: tc),
+                _StatCard(label: 'Balance', value: compactMoney(balance), icon: Icons.account_balance_wallet_rounded, valueColor: balance >= 0 ? tc.lime : tc.red, tc: tc),
               ]),
               const SizedBox(height: 12),
               Row(children: [
-                _StatCard(label: 'Total Income', value: 'Rs. ${_fmt(income)}', icon: Icons.arrow_downward_rounded, valueColor: tc.lime, tc: tc),
+                _StatCard(label: 'Total Income', value: compactMoney(income), icon: Icons.arrow_downward_rounded, valueColor: tc.lime, tc: tc),
                 const SizedBox(width: 12),
-                _StatCard(label: 'Total Expenses', value: 'Rs. ${_fmt(expenses)}', icon: Icons.arrow_upward_rounded, valueColor: tc.red, tc: tc),
+                _StatCard(label: 'Total Expenses', value: compactMoney(expenses), icon: Icons.arrow_upward_rounded, valueColor: tc.red, tc: tc),
               ]),
               const SizedBox(height: 24),
 
@@ -265,10 +266,4 @@ class _Legend extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label, style: TextStyle(color: tc.text40, fontSize: 11)),
       ]);
-}
-
-String _fmt(double v) {
-  if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
-  if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
 }

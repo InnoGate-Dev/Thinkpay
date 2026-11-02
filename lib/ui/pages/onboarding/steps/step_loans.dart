@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/model/onboarding/onboarding_draft.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 import 'package:Thinkpay/ui/pages/onboarding/sheets/loan_editor_sheet.dart';
 import 'package:Thinkpay/ui/pages/onboarding/widgets/onboarding_scaffold.dart';
 import 'package:Thinkpay/ui/pages/onboarding/widgets/onboarding_widgets.dart';
@@ -173,7 +174,7 @@ class _LoansStepState extends State<LoansStep> {
                 text:
                     '${widget.draft.loans.length} loan'
                     '${widget.draft.loans.length == 1 ? '' : 's'} · '
-                    '$symbol${formatMoney(widget.draft.totalRemainingDebt, decimals: 0)} '
+                    '${moneyText(widget.draft.totalRemainingDebt, symbol, decimals: 0)} '
                     'still to pay.',
               ),
             ],
@@ -245,9 +246,9 @@ class _LoanTile extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.base),
           Text(
-            '$symbol${formatMoney(loan.principal, decimals: 0)} · '
+            '${moneyText(loan.principal, symbol, decimals: 0)} · '
             '${loan.durationMonths} months · '
-            '$symbol${formatMoney(loan.monthlyPayment, decimals: 0)}/month',
+            '${moneyText(loan.monthlyPayment, symbol, decimals: 0)}/month',
             style: AppTypography.bodySm.copyWith(
               color: tc.text40,
               fontSize: 12,
@@ -258,23 +259,28 @@ class _LoanTile extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Text(
-                'Paid $symbol${formatMoney(loan.alreadyPaid, decimals: 0)}',
-                style: AppTypography.bodySm.copyWith(
-                  color: tc.intelligenceAccent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: AmountText(
+                  'Paid ${moneyText(loan.alreadyPaid, symbol, decimals: 0)}',
+                  style: AppTypography.bodySm.copyWith(
+                    color: tc.intelligenceAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                loan.isSettled
-                    ? 'Paid off'
-                    : 'Left $symbol${formatMoney(loan.remaining, decimals: 0)}',
-                style: AppTypography.bodySm.copyWith(
-                  color: tc.text70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AmountText(
+                  loan.isSettled
+                      ? 'Paid off'
+                      : 'Left ${moneyText(loan.remaining, symbol, decimals: 0)}',
+                  textAlign: TextAlign.right,
+                  style: AppTypography.bodySm.copyWith(
+                    color: tc.text70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

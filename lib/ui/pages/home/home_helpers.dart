@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-String _fmt(double v) {
-  if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
-  if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}
+import 'package:Thinkpay/core/utils/number_format.dart';
 
 String _dateStr(DateTime d) {
   final now = DateTime.now();
@@ -61,6 +57,7 @@ IconData _categoryIcon(String cat) {
 }
 
 // Expose them as public functions
-String formatAmount(double v) => _fmt(v);
+/// Compact amount for cards and rows: 1.25M / 150K / 25,000 / 450.
+String formatAmount(double v) => compactNumber(v);
 String formatDate(DateTime d) => _dateStr(d);
 IconData getCategoryIcon(String cat) => _categoryIcon(cat);

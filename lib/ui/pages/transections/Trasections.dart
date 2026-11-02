@@ -3,9 +3,11 @@ import 'package:Thinkpay/model/loan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
+import 'package:Thinkpay/ui/component/amount_text.dart';
 
 import '../../../core/repository/categoryRepo.dart';
 import '../../../core/repository/goalTrasection.dart';
@@ -582,8 +584,8 @@ class _TxTile extends StatelessWidget {
           ),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(
-            '${isIncome ? '+' : isTransfer ? '⇄ ' : '−'} Rs. ${_fmt(t.amount)}',
+          AmountText(
+            '${isIncome ? '+' : isTransfer ? '⇄ ' : '− '}${compactMoney(t.amount)}',
             style: GoogleFonts.manrope(
               color: color,
               fontSize: 14,
@@ -670,12 +672,6 @@ String _dateKey(DateTime d) {
 
 String _timeStr(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-
-String _fmt(double v) {
-  if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
-  if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}
 
 IconData _txIcon(_UnifiedTx t) {
   if (t.source == _TxSource.goal) return Icons.flag_rounded;

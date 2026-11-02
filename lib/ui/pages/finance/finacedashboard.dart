@@ -4,11 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/repository/categoryRepo.dart';
 import 'package:Thinkpay/core/repository/trasectionRepo.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/model/categoryModel.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 
 import '../../component/add_transaction_sheet.dart';
+import '../../component/amount_text.dart';
 import 'finance_cate.dart';
 
 class FinanceDashboardPage extends StatefulWidget {
@@ -293,8 +295,8 @@ class _NetBalanceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            '${positive ? '' : '-'}Rs. ${_fmt(netBalance.abs())}',
+          AmountText(
+            compactMoney(netBalance), // "-Rs. 1.25M" when overspent
             style: GoogleFonts.manrope(
               color: Colors.white,
               fontSize: 30,
@@ -430,8 +432,8 @@ class _StatTile extends StatelessWidget {
               style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
             ),
             const SizedBox(height: 2),
-            Text(
-              'Rs. ${_fmt(value)}',
+            AmountText(
+              compactMoney(value),
               style: GoogleFonts.manrope(
                 color: tc.text100,
                 fontSize: 15,
@@ -827,16 +829,21 @@ class _TopCategoriesCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          e.key,
-                          style: GoogleFonts.inter(
-                            color: tc.text70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Text(
+                            e.key,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: tc.text70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        Text(
-                          'Rs. ${_fmt(e.value)}',
+                        const SizedBox(width: 8),
+                        AmountText(
+                          compactMoney(e.value),
                           style: GoogleFonts.manrope(
                             color: tc.text100,
                             fontSize: 12,
@@ -1001,8 +1008,8 @@ class _TxnTile extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            '${_sign()}Rs. ${_fmt(t.amount)}',
+          AmountText(
+            '${_sign()}${compactMoney(t.amount)}',
             style: GoogleFonts.manrope(
               color: color,
               fontSize: 13,
@@ -1016,12 +1023,6 @@ class _TxnTile extends StatelessWidget {
 }
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
-String _fmt(double v) {
-  if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
-  if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}
-
 String _formatDate(DateTime d) {
   const months = [
     'Jan',

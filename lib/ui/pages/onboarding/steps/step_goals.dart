@@ -169,7 +169,7 @@ class _GoalsStepState extends State<GoalsStep> {
               text:
                   '${_editors.length} goal'
                   '${_editors.length == 1 ? '' : 's'} · '
-                  '$symbol${formatMoney(_editors.fold<double>(0, (sum, e) => sum + e.goal.monthlyPlan), decimals: 0)} '
+                  '${moneyText(_editors.fold<double>(0, (sum, e) => sum + e.goal.monthlyPlan), symbol, decimals: 0)} '
                   'a month planned.',
             ),
           ],
@@ -274,7 +274,7 @@ class _GoalTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             '${(goal.progress * 100).round()}% of '
-            '$symbol${formatMoney(goal.target, decimals: 0)}',
+            '${moneyText(goal.target, symbol, decimals: 0)}',
             style: AppTypography.bodySm.copyWith(
               color: tc.text40,
               fontSize: 11,

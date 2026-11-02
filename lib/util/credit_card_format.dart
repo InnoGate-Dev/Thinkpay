@@ -1,23 +1,18 @@
 // ── Formatting & date helpers shared across the credit card feature ──────────
 
+import 'package:Thinkpay/core/utils/number_format.dart';
+
 const List<String> _months = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-/// Comma-grouped currency string, e.g. Rs. 100,000 or Rs. 12,500.50.
-String fmtCardMoney(double v) {
-  final fixed =
-      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  final whole =
-      parts[0].replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
-  return parts.length > 1 ? 'Rs. $whole.${parts[1]}' : 'Rs. $whole';
-}
+/// Compact currency string used on card tiles and detail rows,
+/// e.g. Rs. 1.25M / Rs. 150K / Rs. 12,500.50.
+String fmtCardMoney(double v) => compactMoney(v);
 
 /// Percentage without trailing zeros, e.g. 28 or 28.5.
-String fmtApr(double v) =>
-    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+String fmtApr(double v) => groupedNumber(v, decimals: 2, trimZeros: true);
 
 /// 1 → 1st, 2 → 2nd, 3 → 3rd, 11 → 11th.
 String ordinalDay(int day) {

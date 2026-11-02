@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,16 +47,18 @@ String currencyNameForCode(String code) {
 bool isAppCurrencyCode(String code) =>
     currencies.any((c) => c.code == code.toUpperCase());
 
-/// `185000` → `185,000.00`, `-1250` → `-1,250.00`.
+/// Display amount. Small values keep every digit (`185,000.00`, `1,250`),
+/// large ones are abbreviated so they never overflow a tile (`1.25M`, `150K`).
 String formatMoney(double value, {int decimals = 2}) {
-  final fixed = value.abs().toStringAsFixed(decimals);
-  final parts = fixed.split('.');
-  final whole = parts[0].replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  final body = decimals == 0 ? whole : '$whole.${parts[1]}';
-  return value < 0 ? '-$body' : body;
+  // Fixed precision only matters while the value is still shown in full.
+  final places = value.abs() < kCompactThreshold ? decimals : null;
+  return compactNumber(value, decimals: places);
+}
+
+/// Currency-prefixed display amount, e.g. `$symbol 1.25M` / `Rs. 185,000.00`.
+String moneyText(double value, String symbol, {int decimals = 2}) {
+  final places = value.abs() < kCompactThreshold ? decimals : null;
+  return compactMoney(value, symbol: symbol, decimals: places);
 }
 
 /// Controller-friendly text: no grouping, no trailing zeros.
@@ -67,28 +70,11 @@ String plainAmount(double value) {
 }
 
 /// Forgiving amount parser: accepts `1,200`, ` 1200.50 `, `Rs 1200`, `1.2k`,
-/// `1.5m`. Returns null when nothing numeric is present.
-double? parseMoney(String raw) {
-  var s = raw.toLowerCase().replaceAll(RegExp(r'[\s,]'), '');
-  s = s.replaceAll(RegExp(r'[^0-9.km]'), '');
-  if (s.isEmpty) return null;
-
-  var multiplier = 1.0;
-  if (s.endsWith('k')) {
-    multiplier = 1000;
-    s = s.substring(0, s.length - 1);
-  } else if (s.endsWith('m')) {
-    multiplier = 1000000;
-    s = s.substring(0, s.length - 1);
-  }
-  final value = double.tryParse(s);
-  return value == null ? null : value * multiplier;
-}
+/// `1.5m`, `2B`. Returns null when nothing numeric is present.
+double? parseMoney(String raw) => parseAmount(raw);
 
 /// Percentage without trailing zeros, e.g. `28` or `28.5`.
-String fmtPercent(double value) => value == value.roundToDouble()
-    ? value.toStringAsFixed(0)
-    : value.toString();
+String fmtPercent(double value) => groupedNumber(value, decimals: 2, trimZeros: true);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Text & buttons

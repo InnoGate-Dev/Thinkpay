@@ -238,7 +238,7 @@ class _CardTile extends StatelessWidget {
             children: [
               _Meta(
                 label: 'Limit',
-                value: '$symbol ${formatMoney(card.creditLimit, decimals: 0)}',
+                value: moneyText(card.creditLimit, symbol, decimals: 0),
               ),
               const SizedBox(width: AppSpacing.md),
               _Meta(label: 'Rate', value: '${fmtPercent(card.apr)}% p.a.'),
