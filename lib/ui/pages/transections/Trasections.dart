@@ -1,4 +1,6 @@
 
+import 'package:Thinkpay/model/categoryModel.dart';
+import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/model/loan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,8 +10,10 @@ import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_transaction_sheet.dart';
 import 'package:Thinkpay/ui/component/amount_text.dart';
+import 'package:Thinkpay/ui/component/transaction_detail_sheet.dart';
 
 import '../../../core/repository/categoryRepo.dart';
+import '../../../core/repository/goalRepo.dart';
 import '../../../core/repository/goalTrasection.dart';
 import '../../../core/repository/loanRepo.dart';
 import '../../../core/repository/trasectionRepo.dart';
@@ -33,6 +37,7 @@ class _TransectionState extends State<Transection> {
   final _categoryRepo = CategoryRepository();
   final _transactionRepo = TransactionRepository();
   final _goalTransactionRepo = GoalTrasectionRepository();
+  final _goalRepo = GoalRepository();
   final _loanRepo = LoanRepository();
   String? _error;
 
@@ -59,20 +64,47 @@ class _TransectionState extends State<Transection> {
     });
 
     try {
-      // Fetch regular transactions, goal transactions, and loan payments in
-      // parallel – matching the exact parallel-fetch pattern used across the app.
+      // Fetch regular transactions, goal transactions, loan payments, the
+      // category list and the goals in parallel – matching the exact
+      // parallel-fetch pattern used across the app. Categories and goals are
+      // required because GET /transactions and GET /goaltrasections return
+      // only `category_id` / `goal_id`; without the lookups every record would
+      // fall back to a bare "INCOME" / "EXPENSE" / "Goal" label.
       final results = await Future.wait([
         _transactionRepo.getTransactions(),
         _goalTransactionRepo.getGoalTransactions(),
         _loanRepo.getLoans(withPayments: true), // loans with embedded payments
+        _fetchCategoriesSafe(),
+        _fetchGoalsSafe(),
       ]);
 
       final regularTxs = results[0] as List<ApiTransaction>;
       final goalTxs = results[1] as List<Map<String, dynamic>>;
       final loans = results[2] as List<LoanModel>;
+      final categories = results[3] as List<Category>;
+      final goals = results[4] as List<GoalModel>;
 
-      // Also refresh goal list in the provider so UI stays in sync
-      final localModels = regularTxs.map((t) => t.toLocalModel()).toList();
+      final categoryNames = <int, String>{
+        for (final c in categories)
+          if (c.name.trim().isNotEmpty) c.id: c.name.trim(),
+      };
+
+      // Goals arrive with a typed composite id (e.g. `42_S`); goal rows only
+      // carry the numeric `goal_id`, so index them by their numeric part.
+      final goalsById = <int, GoalModel>{};
+      for (final g in goals) {
+        final numeric = int.tryParse(g.id.split('_').first);
+        if (numeric != null) goalsById[numeric] = g;
+      }
+
+      // Also refresh the provider's transaction list so the dashboard stays in
+      // sync. Names are resolved here, so its category breakdown groups by real
+      // category instead of the transaction type.
+      final localModels = regularTxs
+          .map((t) => t.toLocalModel(
+                fallbackCategory: categoryNames[t.categoryId],
+              ))
+          .toList();
       _provider.setTransactions(localModels);
 
       // Build unified list
@@ -82,11 +114,15 @@ class _TransectionState extends State<Transection> {
       for (final t in regularTxs) {
         unified.add(_UnifiedTx(
           id: 'tx_${t.id}',
-          category: t.categoryName ?? t.type.apiValue,
+          category: t.categoryName ??
+              categoryNames[t.categoryId] ??
+              'Uncategorised',
           amount: t.amount,
           type: t.type,
           date: t.date,
           source: _TxSource.regular,
+          recordedAt: t.createdAt,
+          goal: t.goalId == null ? null : goalsById[t.goalId],
         ));
       }
 
@@ -97,8 +133,9 @@ class _TransectionState extends State<Transection> {
             ? (DateTime.tryParse(raw['transaction_date'].toString()) ??
                 DateTime.now())
             : DateTime.now();
-        final goalName = (raw['goal'] as Map<String, dynamic>?)?['name']
-                as String? ??
+        final goal = goalsById[int.tryParse(raw['goal_id']?.toString() ?? '')];
+        final goalName = goal?.name ??
+            (raw['goal'] as Map<String, dynamic>?)?['name'] as String? ??
             raw['goal_name'] as String? ??
             'Goal';
         unified.add(_UnifiedTx(
@@ -108,12 +145,18 @@ class _TransectionState extends State<Transection> {
           type: TransactionType.transferOut,
           date: date,
           source: _TxSource.goal,
+          reference: goalName,
+          goal: goal,
         ));
       }
 
       // 3. Loan payments (from loans that have payments loaded)
       for (final loan in loans) {
-        for (final payment in loan.payments) {
+        // Oldest first, so the instalment position matches the loan schedule.
+        final payments = [...loan.payments]
+          ..sort((a, b) => a.paidAt.compareTo(b.paidAt));
+        for (var i = 0; i < payments.length; i++) {
+          final payment = payments[i];
           unified.add(_UnifiedTx(
             id: 'lp_${payment.id}',
             category: loan.purpose,
@@ -121,6 +164,11 @@ class _TransectionState extends State<Transection> {
             type: TransactionType.transferOut,
             date: payment.paidAt,
             source: _TxSource.loan,
+            reference: loan.purpose,
+            installment: loan.loanDurationMonths > 0
+                ? '${i + 1} of ${loan.loanDurationMonths}'
+                : null,
+            note: payment.note,
           ));
         }
       }
@@ -132,12 +180,36 @@ class _TransectionState extends State<Transection> {
         setState(() => _allUnified = unified);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load Transaction data: ${e.toString()}')),
-      );
+      if (mounted) {
+        setState(() => _error = e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load Transaction data: ${e.toString()}'),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Categories power the name lookup for transaction rows. A lookup failure
+  /// must not hide the transaction list, so it degrades to an empty list.
+  Future<List<Category>> _fetchCategoriesSafe() async {
+    try {
+      return await _categoryRepo.getCategories();
+    } catch (_) {
+      return const <Category>[];
+    }
+  }
+
+  /// Goals supply the name, target and progress shown on goal rows and their
+  /// detail sheet. Degrades to an empty list so the ledger still renders.
+  Future<List<GoalModel>> _fetchGoalsSafe() async {
+    try {
+      return await _goalRepo.getGoals();
+    } catch (_) {
+      return const <GoalModel>[];
     }
   }
 
@@ -163,6 +235,16 @@ class _TransectionState extends State<Transection> {
     ).then((_) => _loadTrasections()); // Refresh after adding
   }
 
+  void _openDetail(_UnifiedTx t) {
+    final tc = ThemeColors.of(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TransactionDetailSheet(data: t.toDetailData(tc)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
@@ -171,9 +253,7 @@ class _TransectionState extends State<Transection> {
     // Filter by type and search query
     final filtered = _allUnified.where((t) {
       final matchFilter = _filter == null || t.type == _filter;
-      final matchQuery = _query.isEmpty ||
-          t.category.toLowerCase().contains(_query);
-      return matchFilter && matchQuery;
+      return matchFilter && t.matches(_query);
     }).toList();
 
     // Group by date key
@@ -404,18 +484,27 @@ class _TransectionState extends State<Transection> {
                                       Padding(
                                         padding: const EdgeInsets.fromLTRB(
                                             0, 12, 0, 8),
-                                        child: Text(
-                                          entry.key,
-                                          style: GoogleFonts.inter(
-                                            color: tc.text40,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.6,
+                                        child: Row(children: [
+                                          Expanded(
+                                            child: Text(
+                                              entry.key,
+                                              style: GoogleFonts.inter(
+                                                color: tc.text40,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: 0.6,
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          _DayTotals(
+                                              transactions: entry.value,
+                                              tc: tc),
+                                        ]),
                                       ),
                                       _TransactionGroup(
-                                          transactions: entry.value, tc: tc),
+                                          transactions: entry.value,
+                                          tc: tc,
+                                          onSelect: _openDetail),
                                     ],
                                   ))
                               .toList(),
@@ -442,6 +531,11 @@ class _UnifiedTx {
     required this.type,
     required this.date,
     required this.source,
+    this.reference,
+    this.installment,
+    this.recordedAt,
+    this.note,
+    this.goal,
   });
 
   final String id;
@@ -450,6 +544,34 @@ class _UnifiedTx {
   final TransactionType type;
   final DateTime date;
   final _TxSource source;
+
+  /// Goal name / loan purpose this record belongs to, when it has one.
+  final String? reference;
+
+  /// Position of a loan repayment in its schedule, e.g. `3 of 12`.
+  final String? installment;
+
+  /// Server-side creation stamp — only regular transactions expose one.
+  final DateTime? recordedAt;
+
+  /// Free-text note, when the source record carries one (loan payments).
+  final String? note;
+
+  /// Goal the money was moved into, with its live target and progress.
+  final GoalModel? goal;
+
+  bool get isIncome =>
+      type == TransactionType.income || type == TransactionType.otherIn;
+
+  bool get isTransfer =>
+      type == TransactionType.transferOut ||
+      type == TransactionType.transferIn;
+
+  /// True when the money lands in the wallet rather than leaving it.
+  bool get isMoneyIn =>
+      type == TransactionType.income ||
+      type == TransactionType.otherIn ||
+      type == TransactionType.transferIn;
 
   /// Badge label shown next to the category name.
   String get sourceBadge {
@@ -462,13 +584,145 @@ class _UnifiedTx {
         return '';
     }
   }
+
+  /// Readable direction of the money movement.
+  String get typeLabel {
+    switch (type) {
+      case TransactionType.income:
+        return 'Income';
+      case TransactionType.expense:
+        return 'Expense';
+      case TransactionType.transferIn:
+        return 'Transfer in';
+      case TransactionType.transferOut:
+        return 'Transfer out';
+      case TransactionType.otherIn:
+        return 'Other income';
+      case TransactionType.otherOut:
+        return 'Other expense';
+    }
+  }
+
+  /// Second line of the list row — what the record actually is, in context.
+  String get subtitle {
+    switch (source) {
+      case _TxSource.goal:
+        final g = goal;
+        if (g == null || g.targetAmount <= 0) return 'Transfer to goal';
+        return 'Transfer to goal · ${percentNumber(g.progress * 100)} funded';
+      case _TxSource.loan:
+        return installment == null
+            ? 'Loan payment'
+            : 'Loan payment · instalment $installment';
+      case _TxSource.regular:
+        final trimmed = note?.trim();
+        return (trimmed == null || trimmed.isEmpty)
+            ? typeLabel
+            : '$typeLabel · $trimmed';
+    }
+  }
+
+  /// Row icon: goal / loan markers, else the category glyph.
+  IconData get icon {
+    switch (source) {
+      case _TxSource.goal:
+        return Icons.flag_rounded;
+      case _TxSource.loan:
+        return Icons.account_balance_rounded;
+      case _TxSource.regular:
+        return _catIcon(category);
+    }
+  }
+
+  /// Accent colour used for the icon, amount and badge.
+  Color accent(ThemeColors tc) => isIncome
+      ? tc.coreAction
+      : isTransfer
+          ? tc.intelligenceAccent
+          : tc.accentExpense;
+
+  /// Backend reference of the record, e.g. `TXN-42`.
+  String get recordRef {
+    final numeric = id.contains('_') ? id.split('_').last : id;
+    final prefix = switch (source) {
+      _TxSource.regular => 'TXN',
+      _TxSource.goal => 'GOAL',
+      _TxSource.loan => 'LOAN',
+    };
+    return '$prefix-$numeric';
+  }
+
+  /// Case-insensitive match used by the search field.
+  bool matches(String query) {
+    if (query.isEmpty) return true;
+    final haystack = [
+      category,
+      typeLabel,
+      subtitle,
+      reference ?? '',
+      installment ?? '',
+      note ?? '',
+      if (goal != null) _goalTypeLabel(goal!.type),
+    ].join(' ').toLowerCase();
+    return haystack.contains(query);
+  }
+
+  /// Expands this row into the payload of [TransactionDetailSheet].
+  TransactionDetailData toDetailData(ThemeColors tc) {
+    return TransactionDetailData(
+      title: category,
+      typeLabel: typeLabel,
+      amountText:
+          '${isIncome ? '+' : isTransfer ? '⇄ ' : '− '}${groupedMoney(amount)}',
+      amountColor: accent(tc),
+      icon: icon,
+      badge: sourceBadge.isEmpty ? null : sourceBadge,
+      note: note,
+      progress: goal?.progress,
+      progressLabel:
+          goal == null ? null : '${percentNumber(goal!.progress * 100)} funded',
+      facts: [
+        TransactionFact('Type', typeLabel),
+        if (source == _TxSource.regular) TransactionFact('Category', category),
+        if (reference != null && source != _TxSource.regular && goal == null)
+          TransactionFact(
+            source == _TxSource.goal ? 'Goal' : 'Loan',
+            reference!,
+          ),
+        if (goal != null) ...[
+          TransactionFact('Goal', goal!.name),
+          TransactionFact('Goal type', _goalTypeLabel(goal!.type)),
+          TransactionFact('Target', groupedMoney(goal!.targetAmount)),
+          TransactionFact('Saved so far', groupedMoney(goal!.savedAmount)),
+          TransactionFact(
+            'Remaining',
+            groupedMoney(goal!.remaining > 0 ? goal!.remaining : 0),
+          ),
+          TransactionFact(
+            'Status',
+            goal!.isCompleted ? 'Completed' : 'In progress',
+          ),
+        ],
+        if (installment != null) TransactionFact('Instalment', installment!),
+        TransactionFact('Date', _fullDateStr(date)),
+        if (recordedAt != null)
+          TransactionFact('Recorded', _fullDateStr(recordedAt!)),
+        TransactionFact('Reference', recordRef),
+      ],
+    );
+  }
 }
 
 // ── Grouped transaction container ─────────────────────────────────────────────
 class _TransactionGroup extends StatelessWidget {
-  const _TransactionGroup({required this.transactions, required this.tc});
+  const _TransactionGroup({
+    required this.transactions,
+    required this.tc,
+    required this.onSelect,
+  });
   final List<_UnifiedTx> transactions;
   final ThemeColors tc;
+  final ValueChanged<_UnifiedTx> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -492,7 +746,11 @@ class _TransactionGroup extends StatelessWidget {
       child: Column(
         children: [
           for (int i = 0; i < transactions.length; i++) ...[
-            _TxTile(t: transactions[i], tc: tc),
+            _TxTile(
+              t: transactions[i],
+              tc: tc,
+              onTap: () => onSelect(transactions[i]),
+            ),
             if (i < transactions.length - 1)
               Divider(
                 color: tc.divider,
@@ -509,96 +767,148 @@ class _TransactionGroup extends StatelessWidget {
 
 // ── Transaction tile ──────────────────────────────────────────────────────────
 class _TxTile extends StatelessWidget {
-  const _TxTile({required this.t, required this.tc});
+  const _TxTile({required this.t, required this.tc, required this.onTap});
   final _UnifiedTx t;
+  final ThemeColors tc;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = t.accent(tc);
+
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(t.icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t.category,
+                          maxLines: 1,
+                          style: GoogleFonts.inter(
+                              color: tc.text100,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (t.sourceBadge.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            t.sourceBadge,
+                            style: GoogleFonts.inter(
+                              color: color,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    t.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              AmountText(
+                '${t.isIncome ? '+' : t.isTransfer ? '⇄ ' : '− '}${compactMoney(t.amount)}',
+                style: GoogleFonts.manrope(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _timeStr(t.date),
+                style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
+              ),
+            ]),
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right_rounded, size: 16, color: tc.text20),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Per-day totals ────────────────────────────────────────────────────────────
+/// Money in / out for one date group, shown beside the date header so a day is
+/// readable at a glance without opening a single record.
+class _DayTotals extends StatelessWidget {
+  const _DayTotals({required this.transactions, required this.tc});
+  final List<_UnifiedTx> transactions;
   final ThemeColors tc;
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = t.type == TransactionType.income ||
-        t.type == TransactionType.otherIn;
-    final isTransfer = t.type == TransactionType.transferOut ||
-        t.type == TransactionType.transferIn;
-    final color = isIncome
-        ? tc.coreAction
-        : isTransfer
-            ? tc.intelligenceAccent
-            : tc.accentExpense;
+    var moneyIn = 0.0;
+    var moneyOut = 0.0;
+    for (final t in transactions) {
+      if (t.isMoneyIn) {
+        moneyIn += t.amount;
+      } else {
+        moneyOut += t.amount;
+      }
+    }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+    final style = GoogleFonts.inter(
+      fontSize: 10.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.4,
+    );
+
+    return Text.rich(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      TextSpan(children: [
+        if (moneyIn > 0)
+          TextSpan(
+            text: 'IN ${compactMoney(moneyIn)}',
+            style: style.copyWith(color: tc.coreAction),
           ),
-          child: Icon(_txIcon(t), color: color, size: 18),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      t.category,
-                      style: GoogleFonts.inter(
-                          color: tc.text70, fontSize: 13,
-                          fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (t.sourceBadge.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        t.sourceBadge,
-                        style: GoogleFonts.inter(
-                          color: color,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                isTransfer ? 'Transfer Out' : (isIncome ? 'Income' : 'Expense'),
-                style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
-              ),
-            ],
+        if (moneyIn > 0 && moneyOut > 0) const TextSpan(text: '   '),
+        if (moneyOut > 0)
+          TextSpan(
+            text: 'OUT ${compactMoney(moneyOut)}',
+            style: style.copyWith(color: tc.accentExpense),
           ),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          AmountText(
-            '${isIncome ? '+' : isTransfer ? '⇄ ' : '− '}${compactMoney(t.amount)}',
-            style: GoogleFonts.manrope(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            _timeStr(t.date),
-            style: GoogleFonts.inter(color: tc.text40, fontSize: 11),
-          ),
-        ]),
       ]),
     );
   }
@@ -673,10 +983,25 @@ String _dateKey(DateTime d) {
 String _timeStr(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-IconData _txIcon(_UnifiedTx t) {
-  if (t.source == _TxSource.goal) return Icons.flag_rounded;
-  if (t.source == _TxSource.loan) return Icons.account_balance_rounded;
-  return _catIcon(t.category);
+/// Full timestamp used by the detail sheet, e.g. `12 November 2026 · 14:32`.
+String _fullDateStr(DateTime d) {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return '${d.day} ${months[d.month - 1]} ${d.year} · ${_timeStr(d)}';
+}
+
+/// Readable label for the goal bucket a transfer was made into.
+String _goalTypeLabel(GoalType type) {
+  switch (type) {
+    case GoalType.savings:
+      return 'Savings';
+    case GoalType.investment:
+      return 'Investment';
+    case GoalType.debt:
+      return 'Debt';
+  }
 }
 
 IconData _catIcon(String cat) {
