@@ -6,6 +6,17 @@ class GoalService {
 
   GoalService(this._apiClient);
 
+  /// Unwraps the standard `{"data": {...}}` success envelope.
+  ///
+  /// The backend wraps every single-goal payload in a `data` key, so parsing
+  /// the raw body directly would yield an empty goal (0 target / 0 saved,
+  /// which reads as "completed").
+  Map<String, dynamic> _unwrap(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is Map<String, dynamic>) return data;
+    return response;
+  }
+
   /// Creates a new goal.
   /// [type] must be "S" (savings), "I" (investing), or "L" (loan/debt).
   Future<Map<String, dynamic>> createGoal({
@@ -24,8 +35,10 @@ class GoalService {
       'expected_monthly_spend': expectedMonthlySpend,
       'is_complete': isComplete,
     };
-    return await _apiClient.post(ApiEndpoints.goals, data: data)
-        as Map<String, dynamic>;
+    final response =
+        await _apiClient.post(ApiEndpoints.goals, data: data)
+            as Map<String, dynamic>;
+    return _unwrap(response);
   }
 
   /// Returns all goals for the authenticated user as a raw list.
@@ -45,8 +58,9 @@ class GoalService {
 
   /// Fetches a single goal by its composite string ID (e.g. "42_S").
   Future<Map<String, dynamic>> getGoalById(String id) async {
-    return await _apiClient.get(ApiEndpoints.goalById(id))
+    final response = await _apiClient.get(ApiEndpoints.goalById(id))
         as Map<String, dynamic>;
+    return _unwrap(response);
   }
 
   /// Updates an existing goal.
@@ -68,8 +82,10 @@ class GoalService {
       'expected_monthly_spend': expectedMonthlySpend,
       'is_complete': isComplete,
     };
-    return await _apiClient.put(ApiEndpoints.goalById(id), data: data)
-        as Map<String, dynamic>;
+    final response =
+        await _apiClient.put(ApiEndpoints.goalById(id), data: data)
+            as Map<String, dynamic>;
+    return _unwrap(response);
   }
 
   /// Deletes a goal by its composite string ID (e.g. "42_S").

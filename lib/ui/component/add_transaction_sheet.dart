@@ -285,14 +285,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           amount: amount,
           transactionDateTime: _date,
         );
-        // 2. Update goal's saved amount
+        // 2. Update goal's saved amount so the goal section reflects the move
         final updatedGoal = await GoalRepository().addAmountToGoal(
           goal.id,
           amount,
           goal,
         );
         FinanceProvider().addAmountToGoal(goal.id, updatedGoal.savedAmount);
-        if (!wasComplete && updatedGoal.isCompleted) {
+        // Only celebrate a goal this transfer actually completed.
+        if (!wasComplete && updatedGoal.savedAmount >= goal.targetAmount) {
           completedGoal = updatedGoal;
         }
       } else {
@@ -317,9 +318,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       ));
 
       if (mounted) {
-        Navigator.pop(context);
+        // Capture the navigator before popping so the completion dialog can be
+        // shown on a context that outlives this sheet.
+        final navigator = Navigator.of(context);
+        navigator.pop();
         if (completedGoal != null) {
-          showGoalCompletedDialog(context, completedGoal);
+          showGoalCompletedDialog(navigator.context, completedGoal);
         }
       }
     } catch (e) {

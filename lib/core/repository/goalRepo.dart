@@ -35,6 +35,16 @@ class GoalRepository {
     return GoalModel.fromJson(raw);
   }
 
+  /// Parses a goal payload, falling back to [fallback] when the response does
+  /// not describe a goal (e.g. an unexpected/missing `data` envelope).
+  ///
+  /// Without this guard an empty payload would decode into a goal with a
+  /// blank id and 0 target/saved amounts — which `isCompleted` treats as done.
+  GoalModel _parseGoal(Map<String, dynamic> raw, GoalModel fallback) {
+    final parsed = GoalModel.fromJson(raw);
+    return parsed.id.isEmpty ? fallback : parsed;
+  }
+
   /// Creates a new financial goal.
   ///
   /// [type] defaults to [GoalType.savings].
@@ -83,7 +93,15 @@ class GoalRepository {
       expectedMonthlySpend: current.expectedMonthlySpend.toStringAsFixed(2),
       isComplete: effectiveIsComplete,
     );
-    return GoalModel.fromJson(raw);
+    return _parseGoal(
+      raw,
+      current.copyWith(
+        name: name,
+        type: effectiveType,
+        targetAmount: targetAmount,
+        savedAmount: effectiveActual,
+      ),
+    );
   }
 
   /// Deletes a goal by its composite string [id] (e.g. "42_S").
@@ -107,7 +125,7 @@ class GoalRepository {
       expectedMonthlySpend: current.expectedMonthlySpend.toStringAsFixed(2),
       isComplete: newSaved >= current.targetAmount,
     );
-    return GoalModel.fromJson(raw);
+    return _parseGoal(raw, current.copyWith(savedAmount: newSaved));
   }
 
   // ── Categories ────────────────────────────────────────────────────────────

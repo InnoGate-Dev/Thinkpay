@@ -374,33 +374,32 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
       final provider = FinanceProvider();
       final now = DateTime.now();
 
-      // Determine completion from the balance before this contribution. The
-      // API response may contain a stale completion flag, so don't use it to
-      // decide whether to show the one-time completion dialog.
+      // Completion is decided from the balance before this contribution. The
+      // API response may carry a stale completion flag, so the dialog is
+      // driven by the returned balance instead.
       final wasComplete = widget.goal.isCompleted;
-      final reachesTarget = amount >= remaining;
-      final newSavedAmount =
-          (widget.goal.savedAmount + amount).clamp(0.0, widget.goal.targetAmount);
 
-      // Update goal saved amount on the backend
-      await repo.addAmountToGoal(
+      // 1. Update the goal saved amount on the backend
+      final updatedGoal = await repo.addAmountToGoal(
         widget.goal.id,
         amount,
         widget.goal,
       );
 
-      // Record the goal transaction
-      final addtotrasection = await goalTransactionRepo.createGoalTrasection(
+      // 2. Record the goal transaction
+      await goalTransactionRepo.createGoalTrasection(
         goalId: numericGoalId,
         amount: amount,
         transactionDateTime: now,
       );
-      // Sync provider with the backend response
-      provider.addAmountToGoal(widget.goal.id, newSavedAmount);
+
+      // 3. Sync the provider with the balance the backend now holds.
+      provider.addAmountToGoal(widget.goal.id, updatedGoal.savedAmount);
 
       if (!mounted) return;
 
-      final isJustCompleted = !wasComplete && reachesTarget;
+      final isJustCompleted =
+          !wasComplete && updatedGoal.savedAmount >= widget.goal.targetAmount;
       final completedGoal = isJustCompleted
           ? widget.goal.copyWith(savedAmount: widget.goal.targetAmount)
           : null;
