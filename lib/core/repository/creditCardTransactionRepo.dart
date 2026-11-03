@@ -52,6 +52,28 @@ class CreditCardTransactionRepository {
     return await _cardTransactionService.fetchByCard(cardId);
   }
 
+  /// Returns every card entry that belongs to [categoryId], newest first.
+  ///
+  /// The list endpoint has no category filter, so pages are walked until a
+  /// short page arrives and each row is matched on its `category_id`. The
+  /// server caps a page at 100 rows.
+  Future<List<CreditCardTransactionModel>> getCardTransactionsByCategory(
+    int categoryId, {
+    int pageSize = 100,
+    int maxPages = 25,
+  }) async {
+    final matches = <CreditCardTransactionModel>[];
+    for (var page = 1; page <= maxPages; page++) {
+      final rows = await _cardTransactionService.fetchAll(
+        limit: pageSize,
+        page: page,
+      );
+      matches.addAll(rows.where((t) => t.categoryId == categoryId));
+      if (rows.length < pageSize) break;
+    }
+    return matches;
+  }
+
   // ── Create ────────────────────────────────────────────────────────────────
 
   /// Records a card-paid transaction and returns the persisted row.

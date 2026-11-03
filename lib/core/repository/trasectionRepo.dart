@@ -157,6 +157,33 @@ class TransactionRepository {
         .toList();
   }
 
+  /// Returns every ledger transaction that belongs to [categoryId].
+  ///
+  /// `GET /transactions` has no category filter, so the pages are walked until
+  /// the server answers with a short page and each row is matched locally. The
+  /// server silently caps a page at 100 rows, which is also the widest window
+  /// requested here. Card entries live in `creditcard_transactions` and are
+  /// never part of this result.
+  Future<List<ApiTransaction>> getTransactionsByCategory(
+    int categoryId, {
+    int pageSize = 100,
+    int maxPages = 25,
+  }) async {
+    final matches = <ApiTransaction>[];
+    for (var page = 1; page <= maxPages; page++) {
+      final rawList = await _transactionService.getTransactions(
+        page: page,
+        limit: pageSize,
+      );
+      final rows = rawList
+          .map((e) => ApiTransaction.fromJson(e as Map<String, dynamic>))
+          .toList();
+      matches.addAll(rows.where((t) => t.categoryId == categoryId));
+      if (rows.length < pageSize) break;
+    }
+    return matches;
+  }
+
   /// Returns all transactions converted to the local [TransactionModel]
   /// format used by [FinanceProvider]. Pass [categories] when they are already
   /// loaded so each row keeps its real category name.

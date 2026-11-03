@@ -29,8 +29,15 @@ class TransactionService {
     return response as Map<String, dynamic>;
   }
 
-  Future<List<dynamic>> getTransactions() async {
-    final response = await _apiClient.get(ApiEndpoints.transactions);
+  /// Returns one page of the user's ledger transactions, newest first.
+  ///
+  /// The server clamps [limit] to 100 rows without reporting the truncation,
+  /// so windows wider than a page have to be paged with [page].
+  Future<List<dynamic>> getTransactions({int page = 1, int limit = 20}) async {
+    final response = await _apiClient.get(
+      ApiEndpoints.transactions,
+      queryParameters: {'page': page, 'limit': limit},
+    );
     if (response is Map<String, dynamic>) {
       final data = response['data'];
       if (data is List) return data;

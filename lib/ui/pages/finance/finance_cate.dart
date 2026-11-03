@@ -14,6 +14,7 @@ import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'package:Thinkpay/ui/component/add_budget_category_sheet.dart';
+import 'package:Thinkpay/ui/pages/finance/category_transactions.dart';
 
 /// Published whenever the Finance page's Expense/Income/Transfer tab changes.
 /// AppShell reads this so its FAB can pre-select the correct type.
@@ -95,6 +96,26 @@ class _FinancePageState extends State<FinancePage>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Opens the dedicated list of every transaction filed under [b].
+  ///
+  /// [actual] is the figure already resolved for the card, so the page header
+  /// agrees with the card the user tapped.
+  void _openCategory(BudgetCategory b, double actual, Color accentColor) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryTransactionsPage(
+          categoryId: b.id,
+          categoryName: b.name,
+          categoryType: b.type,
+          accentColor: accentColor,
+          plannedAmount: b.expectedAmount,
+          actualAmount: actual,
+        ),
+      ),
+    );
   }
 
   void _openAddBudget() {
@@ -253,6 +274,8 @@ class _FinancePageState extends State<FinancePage>
                         type: TransactionType.expense,
                         onDelete: _deleteCategory,
                         onRefresh: _loadFinanceData,
+                        onOpen: (b, actual) =>
+                            _openCategory(b, actual, tc.accentExpense),
                         tc: tc,
                       ),
                       _FinanceTab(
@@ -265,6 +288,8 @@ class _FinancePageState extends State<FinancePage>
                         type: TransactionType.income,
                         onDelete: _deleteCategory,
                         onRefresh: _loadFinanceData,
+                        onOpen: (b, actual) =>
+                            _openCategory(b, actual, tc.coreAction),
                         tc: tc,
                       ),
                       _FinanceTab(
@@ -277,6 +302,8 @@ class _FinancePageState extends State<FinancePage>
                         type: TransactionType.transferOut,
                         onDelete: _deleteCategory,
                         onRefresh: _loadFinanceData,
+                        onOpen: (b, actual) =>
+                            _openCategory(b, actual, tc.text70),
                         tc: tc,
                         goals: _goals,
                         loans: _loans,
@@ -357,6 +384,7 @@ class _FinanceTab extends StatelessWidget {
     required this.type,
     required this.onDelete,
     required this.onRefresh,
+    required this.onOpen,
     required this.tc,
     this.goals = const [],
     this.loans = const [],
@@ -376,6 +404,10 @@ class _FinanceTab extends StatelessWidget {
 
   /// Pull-to-refresh callback to reload categories from the backend.
   final Future<void> Function() onRefresh;
+
+  /// Called when a category card is tapped, so the page can open that
+  /// category's transaction list.
+  final void Function(BudgetCategory category, double actual) onOpen;
 
   final ThemeColors tc;
 
@@ -614,15 +646,17 @@ class _FinanceTab extends StatelessWidget {
               ),
             ),
 
-          ...budgets.map(
-                (b) => _FinanceCard(
+          ...budgets.map((b) {
+            final actual = actualMap[b.name] ?? b.actualAmount;
+            return _FinanceCard(
               b: b,
-              actual: actualMap[b.name] ?? b.actualAmount,
+              actual: actual,
               accentColor: accentColor,
               onDelete: onDelete,
+              onTap: () => onOpen(b, actual),
               tc: tc,
-            ),
-          ),
+            );
+          }),
 
           // ── Virtual Goal / Loan transfer-out items ─────────────────────────
           if (virtualItems.isNotEmpty) ...[
@@ -642,6 +676,7 @@ class _FinanceCard extends StatelessWidget {
     required this.actual,
     required this.accentColor,
     required this.onDelete,
+    required this.onTap,
     required this.tc,
   });
 
@@ -651,6 +686,9 @@ class _FinanceCard extends StatelessWidget {
 
   /// Callback for when the user confirms deletion of this card's category.
   final Future<void> Function(int id) onDelete;
+
+  /// Opens the transaction list for this category.
+  final VoidCallback onTap;
 
   final ThemeColors tc;
 
@@ -730,144 +768,171 @@ class _FinanceCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      // Clipping keeps the tap ripple inside the rounded card. The popup menu
+      // handles its own taps, so the rest of the card opens the category's
+      // transaction list.
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    b.name,
-                    style: GoogleFonts.inter(
-                      color: tc.text100,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        b.name,
+                        style: GoogleFonts.inter(
+                          color: tc.text100,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
+                    if (over)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tc.accentExpenseDim,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Over budget',
+                          style: GoogleFonts.inter(
+                            color: tc.accentExpense,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 4),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: tc.text40,
+                        size: 18,
+                      ),
+                      color: tc.surface2,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      onSelected: (v) {
+                        if (v == 'edit') _openEdit(context);
+                        if (v == 'delete') _confirmDelete(context);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                color: tc.coreAction,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Edit',
+                                style: GoogleFonts.inter(color: tc.text100),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                color: tc.accentExpense,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Delete',
+                                style:
+                                    GoogleFonts.inter(color: tc.accentExpense),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                if (over)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                const SizedBox(height: 12),
+
+                // Progress bar with percentage
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          minHeight: 6,
+                          backgroundColor: tc.text10,
+                          valueColor: AlwaysStoppedAnimation(bar),
+                        ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: tc.accentExpenseDim,
-                      borderRadius: BorderRadius.circular(6),
+                    const SizedBox(width: 10),
+                    Text(
+                      hasTarget ? '${(pct * 100).toStringAsFixed(0)}%' : '—',
+                      style: GoogleFonts.manrope(
+                        color: bar,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    child: Text(
-                      'Over budget',
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
                       style: GoogleFonts.inter(
-                        color: tc.accentExpense,
-                        fontSize: 10,
+                        color: bar,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                const SizedBox(width: 4),
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert_rounded,
-                    color: tc.text40,
-                    size: 18,
-                  ),
-                  color: tc.surface2,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  onSelected: (v) {
-                    if (v == 'edit') _openEdit(context);
-                    if (v == 'delete') _confirmDelete(context);
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            color: tc.coreAction,
-                            size: 16,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          hasTarget
+                              ? 'of ${_fmt(expected)}'
+                              : 'no planned amount',
+                          style: GoogleFonts.inter(
+                            color: tc.text40,
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Edit',
-                            style: GoogleFonts.inter(color: tc.text100),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline_rounded,
-                            color: tc.accentExpense,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Delete',
-                            style: GoogleFonts.inter(color: tc.accentExpense),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 14,
+                          color: tc.text20,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Progress bar with percentage
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: pct,
-                      minHeight: 6,
-                      backgroundColor: tc.text10,
-                      valueColor: AlwaysStoppedAnimation(bar),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  hasTarget ? '${(pct * 100).toStringAsFixed(0)}%' : '—',
-                  style: GoogleFonts.manrope(
-                    color: bar,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
-                  style: GoogleFonts.inter(
-                    color: bar,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  hasTarget ? 'of ${_fmt(expected)}' : 'no planned amount',
-                  style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

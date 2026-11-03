@@ -35,10 +35,13 @@ class CreditCardTransactionService {
   /// Card spending lives in `creditcard_transactions`, so `GET /transactions`
   /// never lists it — this is the call a combined ledger has to add. The server
   /// silently caps [limit] at 100, so that is the widest single request.
-  Future<List<CreditCardTransactionModel>> fetchAll({int limit = 100}) async {
+  Future<List<CreditCardTransactionModel>> fetchAll({
+    int limit = 100,
+    int page = 1,
+  }) async {
     final response = await _apiClient.get(
       ApiEndpoints.creditCardTransactions,
-      queryParameters: {'limit': limit},
+      queryParameters: {'page': page, 'limit': limit},
     );
 
     final rows = _unwrapList(response);
