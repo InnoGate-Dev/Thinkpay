@@ -1,5 +1,7 @@
 
 import 'package:Thinkpay/model/categoryModel.dart';
+import 'package:Thinkpay/model/credit_card_model.dart';
+import 'package:Thinkpay/model/credit_card_transaction_model.dart';
 import 'package:Thinkpay/model/goal_model.dart';
 import 'package:Thinkpay/model/loan_model.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +16,8 @@ import 'package:Thinkpay/ui/component/transaction_detail_sheet.dart';
 import 'package:Thinkpay/ui/component/transaction_edit_sheet.dart';
 
 import '../../../core/repository/categoryRepo.dart';
+import '../../../core/repository/creditCardRepo.dart';
+import '../../../core/repository/creditCardTransactionRepo.dart';
 import '../../../core/repository/goalRepo.dart';
 import '../../../core/repository/goalTrasection.dart';
 import '../../../core/repository/loanRepo.dart';
@@ -40,9 +44,11 @@ class _TransectionState extends State<Transection> {
   final _goalTransactionRepo = GoalTrasectionRepository();
   final _goalRepo = GoalRepository();
   final _loanRepo = LoanRepository();
+  final _cardTransactionRepo = CreditCardTransactionRepository();
+  final _cardRepo = CreditCardRepository();
   String? _error;
 
-  /// Unified list combining regular, goal, and loan transactions.
+  /// Unified list combining regular, goal, loan and credit card transactions.
   List<_UnifiedTx> _allUnified = [];
 
   @override
@@ -65,18 +71,21 @@ class _TransectionState extends State<Transection> {
     });
 
     try {
-      // Fetch regular transactions, goal transactions, loan payments, the
-      // category list and the goals in parallel – matching the exact
-      // parallel-fetch pattern used across the app. Categories and goals are
-      // required because GET /transactions and GET /goaltrasections return
-      // only `category_id` / `goal_id`; without the lookups every record would
-      // fall back to a bare "INCOME" / "EXPENSE" / "Goal" label.
+      // Fetch regular transactions, goal transactions, loan payments, card
+      // transactions, the category list, the goals and the cards in parallel –
+      // matching the exact parallel-fetch pattern used across the app.
+      // Categories and goals are required because GET /transactions and
+      // GET /goaltrasections return only `category_id` / `goal_id`; without the
+      // lookups every record would fall back to a bare "INCOME" / "EXPENSE" /
+      // "Goal" label. Cards name the card a card-charged row belongs to.
       final results = await Future.wait([
         _transactionRepo.getTransactions(),
         _goalTransactionRepo.getGoalTransactions(),
         _loanRepo.getLoans(withPayments: true), // loans with embedded payments
         _fetchCategoriesSafe(),
         _fetchGoalsSafe(),
+        _fetchCardTransactionsSafe(),
+        _fetchCardsSafe(),
       ]);
 
       final regularTxs = results[0] as List<ApiTransaction>;
@@ -84,6 +93,8 @@ class _TransectionState extends State<Transection> {
       final loans = results[2] as List<LoanModel>;
       final categories = results[3] as List<Category>;
       final goals = results[4] as List<GoalModel>;
+      final cardTxs = results[5] as List<CreditCardTransactionModel>;
+      final cards = results[6] as List<CreditCardModel>;
 
       final categoryNames = <int, String>{
         for (final c in categories)
@@ -97,6 +108,10 @@ class _TransectionState extends State<Transection> {
         final numeric = int.tryParse(g.id.split('_').first);
         if (numeric != null) goalsById[numeric] = g;
       }
+
+      final cardsById = <int, CreditCardModel>{
+        for (final c in cards) c.id: c,
+      };
 
       // Also refresh the provider's transaction list so the dashboard stays in
       // sync. Names are resolved here, so its category breakdown groups by real
@@ -180,6 +195,28 @@ class _TransectionState extends State<Transection> {
         }
       }
 
+      // 4. Credit card spending
+      //
+      // Card charges are written to `creditcard_transactions`, never to the main
+      // ledger, so GET /transactions cannot list them. They are merged here so a
+      // card-paid expense appears alongside cash and loan rows.
+      for (final raw in cardTxs) {
+        unified.add(_UnifiedTx(
+          id: 'ctx_${raw.id}',
+          category: categoryNames[raw.categoryId] ?? 'Uncategorised',
+          amount: raw.amount,
+          type: raw.type,
+          date: raw.date,
+          source: _TxSource.card,
+          recordId: raw.id,
+          categoryId: raw.categoryId,
+          cardId: raw.cardId,
+          cardName: cardsById[raw.cardId]?.name,
+          recordedAt: raw.createdAt,
+          note: raw.note,
+        ));
+      }
+
       // Sort by date descending
       unified.sort((a, b) => b.date.compareTo(a.date));
 
@@ -217,6 +254,25 @@ class _TransectionState extends State<Transection> {
       return await _goalRepo.getGoals();
     } catch (_) {
       return const <GoalModel>[];
+    }
+  }
+
+  /// Card spending lives in `creditcard_transactions`, not in the ledger, so it
+  /// has to be asked for explicitly. Degrades to an empty list like the others.
+  Future<List<CreditCardTransactionModel>> _fetchCardTransactionsSafe() async {
+    try {
+      return await _cardTransactionRepo.getCardTransactions();
+    } catch (_) {
+      return const <CreditCardTransactionModel>[];
+    }
+  }
+
+  /// Cards give a card-charged row its display name. Same degradation rule.
+  Future<List<CreditCardModel>> _fetchCardsSafe() async {
+    try {
+      return await _cardRepo.getCards();
+    } catch (_) {
+      return const <CreditCardModel>[];
     }
   }
 
@@ -300,6 +356,8 @@ class _TransectionState extends State<Transection> {
             loanId: t.loanId!,
             paymentId: t.recordId!,
           );
+        case _TxSource.card:
+          await _cardTransactionRepo.deleteCardTransaction(t.recordId!);
       }
       if (!mounted) return;
       messenger.showSnackBar(
@@ -642,8 +700,8 @@ class _TransectionState extends State<Transection> {
 
 // ── Unified transaction model ─────────────────────────────────────────────────
 /// Internal unified model that merges regular transactions, goal transactions,
-/// and loan payments into a single list for display.
-enum _TxSource { regular, goal, loan }
+/// loan payments and credit card spending into a single list for display.
+enum _TxSource { regular, goal, loan, card }
 
 class _UnifiedTx {
   const _UnifiedTx({
@@ -657,11 +715,13 @@ class _UnifiedTx {
     this.categoryId,
     this.goalId,
     this.loanId,
+    this.cardId,
     this.reference,
     this.installment,
     this.recordedAt,
     this.note,
     this.goal,
+    this.cardName,
   });
 
   final String id;
@@ -684,6 +744,13 @@ class _UnifiedTx {
 
   /// Parent loan of a payment row.
   final int? loanId;
+
+  /// Card a card-charged row was paid with. Null when the card was deleted,
+  /// which also freezes the edit path (the update route needs a `card_id`).
+  final int? cardId;
+
+  /// Display name of [cardId]'s card, when the card still exists.
+  final String? cardName;
 
   /// Goal name / loan purpose this record belongs to, when it has one.
   final String? reference;
@@ -720,6 +787,8 @@ class _UnifiedTx {
         return 'Goal';
       case _TxSource.loan:
         return 'Loan';
+      case _TxSource.card:
+        return 'Card';
       case _TxSource.regular:
         return '';
     }
@@ -754,6 +823,13 @@ class _UnifiedTx {
         return installment == null
             ? 'Loan payment'
             : 'Loan payment · instalment $installment';
+      case _TxSource.card:
+        final parts = <String>[
+          typeLabel,
+          if (cardName != null && cardName!.trim().isNotEmpty) cardName!.trim(),
+          if (note != null && note!.trim().isNotEmpty) note!.trim(),
+        ];
+        return parts.join(' · ');
       case _TxSource.regular:
         final trimmed = note?.trim();
         return (trimmed == null || trimmed.isEmpty)
@@ -762,13 +838,15 @@ class _UnifiedTx {
     }
   }
 
-  /// Row icon: goal / loan markers, else the category glyph.
+  /// Row icon: goal / loan / card markers, else the category glyph.
   IconData get icon {
     switch (source) {
       case _TxSource.goal:
         return Icons.flag_rounded;
       case _TxSource.loan:
         return Icons.account_balance_rounded;
+      case _TxSource.card:
+        return Icons.credit_card_rounded;
       case _TxSource.regular:
         return _catIcon(category);
     }
@@ -788,6 +866,7 @@ class _UnifiedTx {
       _TxSource.regular => 'TXN',
       _TxSource.goal => 'GOAL',
       _TxSource.loan => 'LOAN',
+      _TxSource.card => 'CARD',
     };
     return '$prefix-$numeric';
   }
@@ -800,6 +879,7 @@ class _UnifiedTx {
       typeLabel,
       subtitle,
       reference ?? '',
+      cardName ?? '',
       installment ?? '',
       note ?? '',
       if (goal != null) _goalTypeLabel(goal!.type),
@@ -813,12 +893,14 @@ class _UnifiedTx {
     final record = recordId;
     if (record == null) return null;
     if (source == _TxSource.loan && loanId == null) return null;
+    if (source == _TxSource.card && cardId == null) return null;
 
     return TransactionEditDraft(
       kind: switch (source) {
         _TxSource.regular => TransactionRecordKind.transaction,
         _TxSource.goal => TransactionRecordKind.goalTransfer,
         _TxSource.loan => TransactionRecordKind.loanPayment,
+        _TxSource.card => TransactionRecordKind.cardTransaction,
       },
       recordId: record,
       recordRef: recordRef,
@@ -832,6 +914,7 @@ class _UnifiedTx {
       goalId: goalId,
       goal: goal,
       loanId: loanId,
+      cardId: cardId,
     );
   }
 
@@ -851,7 +934,10 @@ class _UnifiedTx {
           goal == null ? null : '${percentNumber(goal!.progress * 100)} funded',
       facts: [
         TransactionFact('Type', typeLabel),
-        if (source == _TxSource.regular) TransactionFact('Category', category),
+        if (source == _TxSource.regular || source == _TxSource.card)
+          TransactionFact('Category', category),
+        if (source == _TxSource.card)
+          TransactionFact('Card', cardName ?? 'Deleted card'),
         if (reference != null && source != _TxSource.regular && goal == null)
           TransactionFact(
             source == _TxSource.goal ? 'Goal' : 'Loan',

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/constant/app_colors.dart';
 import '../../core/repository/categoryRepo.dart';
+import '../../core/repository/creditCardTransactionRepo.dart';
 import '../../core/repository/goalRepo.dart';
 import '../../core/repository/goalTrasection.dart';
 import '../../core/repository/loanRepo.dart';
@@ -28,6 +29,9 @@ enum TransactionRecordKind {
 
   /// `PUT|DELETE /loans/{loanId}/payments/{id}`
   loanPayment,
+
+  /// `PUT|DELETE /credit-card-transactions/{id}`
+  cardTransaction,
 }
 
 /// Everything [TransactionEditSheet] needs to update or delete one record.
@@ -47,6 +51,7 @@ class TransactionEditDraft {
     this.goalId,
     this.goal,
     this.loanId,
+    this.cardId,
   });
 
   final TransactionRecordKind kind;
@@ -78,11 +83,16 @@ class TransactionEditDraft {
   /// Parent loan of a payment row.
   final int? loanId;
 
+  /// Card a `creditcard_transactions` row was charged to. The update route
+  /// replaces the whole row, so the existing link has to be resent.
+  final int? cardId;
+
   /// Only plain income / expense rows may have their category and type
   /// re-picked: TRANSFER rows require a `goal_id` plus a category of matching
   /// type, and OTHER rows have no matching category bucket in the picker.
   bool get canPickCategoryAndType =>
-      kind == TransactionRecordKind.transaction &&
+      (kind == TransactionRecordKind.transaction ||
+          kind == TransactionRecordKind.cardTransaction) &&
       (type == TransactionType.income || type == TransactionType.expense);
 }
 
@@ -107,6 +117,7 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
   final _goalTransactionRepo = GoalTrasectionRepository();
   final _goalRepo = GoalRepository();
   final _loanRepo = LoanRepository();
+  final _cardTransactionRepo = CreditCardTransactionRepository();
 
   late TransactionType _type;
   late DateTime _date;
@@ -254,7 +265,8 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
       return;
     }
     if (_categoryId == null &&
-        widget.draft.kind == TransactionRecordKind.transaction) {
+        (widget.draft.kind == TransactionRecordKind.transaction ||
+            widget.draft.kind == TransactionRecordKind.cardTransaction)) {
       _showError('This record needs a category before it can be updated.');
       return;
     }
@@ -268,6 +280,8 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
           await _updateGoalTransfer(amount);
         case TransactionRecordKind.loanPayment:
           await _updateLoanPayment(amount);
+        case TransactionRecordKind.cardTransaction:
+          await _updateCardTransaction(amount);
       }
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -314,6 +328,19 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
       paymentId: widget.draft.recordId,
       amount: amount,
       paidAt: _date,
+    );
+  }
+
+  /// Card rows carry their card link and category, both of which the update
+  /// route requires; the server also re-files the category amount for us.
+  Future<void> _updateCardTransaction(double amount) async {
+    await _cardTransactionRepo.updateCardTransaction(
+      widget.draft.recordId,
+      cardId: widget.draft.cardId!,
+      categoryId: _categoryId!,
+      type: _type,
+      amount: amount,
+      date: _date,
     );
   }
 

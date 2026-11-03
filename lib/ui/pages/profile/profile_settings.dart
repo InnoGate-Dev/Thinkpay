@@ -914,8 +914,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Your profile is deactivated right away and your name, email '
-                  'and password are replaced with a deletion placeholder 30 '
+                  'Your profile is deactivated right away and schedule to delete 30 '
                   'days later.',
                   style: AppTypography.bodySm.copyWith(
                     color: tc.text70,

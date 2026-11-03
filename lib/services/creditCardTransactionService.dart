@@ -30,6 +30,24 @@ class CreditCardTransactionService {
         .toList();
   }
 
+  /// Returns every card entry of the user across all cards, newest first.
+  ///
+  /// Card spending lives in `creditcard_transactions`, so `GET /transactions`
+  /// never lists it — this is the call a combined ledger has to add. The server
+  /// silently caps [limit] at 100, so that is the widest single request.
+  Future<List<CreditCardTransactionModel>> fetchAll({int limit = 100}) async {
+    final response = await _apiClient.get(
+      ApiEndpoints.creditCardTransactions,
+      queryParameters: {'limit': limit},
+    );
+
+    final rows = _unwrapList(response);
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(CreditCardTransactionModel.fromJson)
+        .toList();
+  }
+
   /// Records a card-paid expense.
   ///
   /// [type] must match the category's type — the backend rejects a mismatch —
@@ -58,11 +76,60 @@ class CreditCardTransactionService {
     return CreditCardTransactionModel.fromJson(data);
   }
 
+  /// Updates an entry through `PUT /credit-card-transactions/{id}`.
+  ///
+  /// The note is deliberately left out of the body: the backend keeps the
+  /// stored note when the field is absent, so an amount-only edit cannot wipe
+  /// it. [cardId] is resent because the update replaces the whole row.
+  Future<CreditCardTransactionModel> update({
+    required int id,
+    required int cardId,
+    required int categoryId,
+    required TransactionType type,
+    required double amount,
+    required DateTime date,
+  }) async {
+    final response = await _apiClient.put(
+      '${ApiEndpoints.creditCardTransactions}/$id',
+      data: {
+        'card_id': cardId,
+        'category_id': categoryId,
+        'type': _apiTypeValue(type),
+        'amount': amount.toStringAsFixed(2),
+        'date': date.toUtc().toIso8601String(),
+      },
+    );
+
+    final data = _unwrapObject(response);
+    return CreditCardTransactionModel.fromJson(data);
+  }
+
   /// Deletes an entry; the server also reverses its category amount.
   Future<void> delete(int id) async {
     await _apiClient.delete(
       '${ApiEndpoints.creditCardTransactions}/$id',
     );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  /// Exact API literal for [type]. [TransactionType.apiValue] collapses
+  /// `transferIn` / `transferOut` onto `INCOME` / `EXPENSE`, which would
+  /// silently rewrite a transfer row on save.
+  String _apiTypeValue(TransactionType type) {
+    switch (type) {
+      case TransactionType.income:
+        return 'INCOME';
+      case TransactionType.expense:
+        return 'EXPENSE';
+      case TransactionType.transferIn:
+        return 'TRANSFER_IN';
+      case TransactionType.transferOut:
+        return 'TRANSFER_OUT';
+      case TransactionType.otherIn:
+        return 'OTHER_IN';
+      case TransactionType.otherOut:
+        return 'OTHER_OUT';
+    }
   }
 
   // ── Envelope helpers ──────────────────────────────────────────────────────

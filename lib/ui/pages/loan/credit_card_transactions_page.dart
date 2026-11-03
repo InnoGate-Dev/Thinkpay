@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constant/app_colors.dart';
 import '../../../core/repository/categoryRepo.dart';
+import '../../../core/repository/creditCardTransactionRepo.dart';
 import '../../../core/utils/number_format.dart';
 import '../../../model/categoryModel.dart';
 import '../../../model/credit_card_model.dart';
 import '../../../model/credit_card_transaction_model.dart';
 import '../../../model/transaction_model.dart';
-import '../../../services/creditCardTransactionService.dart';
 import '../../../util/credit_card_format.dart';
 
 /// Full-screen history of every entry charged to one credit card.
@@ -26,7 +26,7 @@ class CreditCardTransactionsPage extends StatefulWidget {
 }
 
 class _CreditCardTransactionsPageState extends State<CreditCardTransactionsPage> {
-  final _cardTxService = CreditCardTransactionService();
+  final _cardTxRepo = CreditCardTransactionRepository();
   final _categoryRepo = CategoryRepository();
 
   late Future<_CardHistoryData> _future;
@@ -39,7 +39,7 @@ class _CreditCardTransactionsPageState extends State<CreditCardTransactionsPage>
 
   Future<_CardHistoryData> _load() async {
     final results = await Future.wait([
-      _cardTxService.fetchByCard(widget.card.id),
+      _cardTxRepo.getCardTransactionsByCard(widget.card.id),
       _categoryRepo.getCategories(),
     ]);
 
