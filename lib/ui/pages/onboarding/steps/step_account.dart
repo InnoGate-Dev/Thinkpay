@@ -259,7 +259,9 @@ class _SummaryStrip extends StatelessWidget {
               ' · ${_plural(draft.goals.length, 'goal', 'goals')}';
 
     final location = draft.country == null
-        ? 'Country not set · ${draft.currencyCode}'
+        ? (draft.currencyCode.isEmpty
+            ? 'Country & currency not set'
+            : 'Country not set · ${draft.currencyCode}')
         : '${draft.country!.emoji} ${draft.country!.name} · '
               '${draft.currencyCode}';
 
@@ -332,7 +334,11 @@ class _SetupIndexSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final tc = ThemeColors.of(context);
     final entries = <(int, String, String)>[
-      (0, 'Country & currency', draft.currencyCode),
+      (
+        0,
+        'Country & currency',
+        draft.currencyCode.isEmpty ? 'Not set' : draft.currencyCode,
+      ),
       (
         1,
         'Income',

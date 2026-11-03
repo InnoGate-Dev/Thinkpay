@@ -13,7 +13,12 @@ class OnboardingDraft {
   ccp.Country? country;
 
   /// ISO 4217 code used for every amount entered during onboarding.
-  String currencyCode = 'LKR';
+  /// Empty until selected or set via country selection.
+  String currencyCode = '';
+
+  /// True when both country and currency have been selected.
+  bool get isCountryAndCurrencySelected =>
+      country != null && currencyCode.trim().isNotEmpty;
 
   final List<MoneyItem> incomes = <MoneyItem>[];
   final List<MoneyItem> expenses = <MoneyItem>[];

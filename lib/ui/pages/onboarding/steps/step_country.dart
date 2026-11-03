@@ -50,7 +50,9 @@ class _CountryStepState extends State<CountryStep> {
     final draft = widget.draft;
     final country = draft.country;
     final code = draft.currencyCode;
-    final symbol = symbolForCode(code);
+    final hasCurrency = code.trim().isNotEmpty;
+    final symbol = hasCurrency ? symbolForCode(code) : '🌐';
+    final isComplete = draft.isCountryAndCurrencySelected;
 
     final flag = country == null || country.emoji.isEmpty
         ? '🌐'
@@ -73,18 +75,18 @@ class _CountryStepState extends State<CountryStep> {
           const StepTitle(
             title: 'Where do you live?',
             subtitle:
-                'Six quick questions, about 90 seconds. '
-                'Every one of them is optional.',
+                'Select your country and primary currency to get started. '
+                'The remaining steps are optional.',
           ),
           const SizedBox(height: AppSpacing.md),
 
           LabeledField(
-            label: 'Country',
+            label: 'Country *',
             child: _SelectorRow(
               badge: Text(flag, style: const TextStyle(fontSize: 20)),
               title: country?.name ?? 'Select your country',
               subtitle: country == null
-                  ? 'Any of 250 countries'
+                  ? 'Required · Any of 250 countries'
                   : '+${country.phoneCode} · ${country.currencyCode}',
               onTap: _pickCountry,
             ),
@@ -92,7 +94,7 @@ class _CountryStepState extends State<CountryStep> {
           const SizedBox(height: AppSpacing.marginMobile),
 
           LabeledField(
-            label: 'Currency',
+            label: 'Currency *',
             child: _SelectorRow(
               badge: Text(
                 symbol,
@@ -102,14 +104,16 @@ class _CountryStepState extends State<CountryStep> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              title: '$code · ${currencyNameForCode(code)}',
-              subtitle: 'Tap to change',
+              title: hasCurrency
+                  ? '$code · ${currencyNameForCode(code)}'
+                  : 'Select your currency',
+              subtitle: hasCurrency ? 'Tap to change' : 'Required · Tap to select',
               onTap: _pickCurrency,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
 
-          if (country != null && !isAppCurrencyCode(code))
+          if (country != null && hasCurrency && !isAppCurrencyCode(code))
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: InfoNote(
@@ -128,17 +132,22 @@ class _CountryStepState extends State<CountryStep> {
                 'account. Everything you enter in the next steps can be '
                 'changed later in your profile.',
           ),
-          const SizedBox(height: AppSpacing.base),
-          Text(
-            'Amounts will be shown as ${moneyText(1250, symbol, decimals: 0)}',
-            style: AppTypography.bodySm.copyWith(
-              color: tc.text40,
-              fontSize: 11,
+          if (hasCurrency) ...[
+            const SizedBox(height: AppSpacing.base),
+            Text(
+              'Amounts will be shown as ${moneyText(1250, symbol, decimals: 0)}',
+              style: AppTypography.bodySm.copyWith(
+                color: tc.text40,
+                fontSize: 11,
+              ),
             ),
-          ),
+          ],
         ],
       ),
-      footer: PrimaryCta(label: 'Continue', onTap: widget.onNext),
+      footer: PrimaryCta(
+        label: 'Continue',
+        onTap: isComplete ? widget.onNext : null,
+      ),
     );
   }
 }
