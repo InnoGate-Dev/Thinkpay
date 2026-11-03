@@ -8,8 +8,12 @@ import '../../core/repository/loanRepo.dart';
 import '../../core/repository/trasectionRepo.dart';
 import '../../core/utils/number_format.dart';
 import '../../model/budget_model.dart';
+import '../../model/credit_card_model.dart';
 import '../../model/goal_model.dart';
 import '../../model/loan_model.dart';
+import '../../services/creditCardService.dart';
+import '../../services/creditCardTransactionService.dart';
+import '../../util/credit_card_format.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
 import 'add_goal_sheet.dart';
@@ -66,10 +70,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   List<LoanModel> _loans = [];
   _TransferTarget? _selectedTarget;
 
+  // ── Credit-card-specific state (expenses only) ─────────────────────────────
+  bool _loadingCards = false;
+  List<CreditCardModel> _cards = [];
+  int? _paidWithCardId;
+
   bool _submitting = false;
 
   final _transactionRepo = TransactionRepository();
   final _categoryRepo = CategoryRepository();
+  final _creditCardRepo = CreditCardService();
+  final _creditCardTxService = CreditCardTransactionService();
 
   @override
   void initState() {
@@ -78,10 +89,44 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     if (FinanceProvider().budgets.isEmpty) {
       _fetchCategories();
     }
+    if (_type == TransactionType.expense) {
+      _fetchCards();
+    }
     if (_type == TransactionType.transferOut ||
         _type == TransactionType.transferIn) {
       _fetchTransferTargets();
     }
+  }
+
+  /// Loads the credit cards an expense can be paid with.
+  Future<void> _fetchCards() async {
+    if (_loadingCards) return;
+    setState(() => _loadingCards = true);
+    try {
+      final cards = await _creditCardRepo.fetchCards();
+      if (!mounted) return;
+      setState(() {
+        _cards = cards;
+        // The chosen card may have been deleted while the sheet was open.
+        if (_paidWithCardId != null &&
+            !cards.any((c) => c.id == _paidWithCardId)) {
+          _paidWithCardId = null;
+        }
+      });
+    } catch (_) {
+      // Non-fatal: the expense can still be recorded without a card.
+    } finally {
+      if (mounted) setState(() => _loadingCards = false);
+    }
+  }
+
+  /// Selected card, if any — drives the "available credit" hint.
+  CreditCardModel? get _selectedCard {
+    if (_paidWithCardId == null) return null;
+    for (final card in _cards) {
+      if (card.id == _paidWithCardId) return card;
+    }
+    return null;
   }
 
   Future<void> _fetchCategories() async {
@@ -256,21 +301,42 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
     setState(() => _submitting = true);
 
+    // Only expenses can be paid with a card; other types never carry one.
+    final paidWithCard =
+        _type == TransactionType.expense ? _paidWithCardId : null;
+
     try {
       final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
-      final createdApiTx = await _transactionRepo.createTransaction(
-        categoryId: matchingCategory.id,
-        type: _type,
-        amount: amount,
-        date: _date,
-        notes: note,
-      );
 
-      // Adds the row to the ledger and rolls the amount into the matching
-      // budget category so its "actual" progress updates immediately.
-      FinanceProvider().addTransaction(
-        createdApiTx.toLocalModel(fallbackCategory: matchingCategory.name),
-      );
+      if (paidWithCard != null) {
+        // Card spending is stored in creditcard_transactions, not in the main
+        // ledger. The backend also rolls the amount into the category's
+        // actual_amount, so refresh the cached budgets rather than adding a
+        // local ledger row that a reload would never find.
+        await _creditCardTxService.create(
+          cardId: paidWithCard,
+          categoryId: matchingCategory.id,
+          type: TransactionType.expense,
+          amount: amount,
+          date: _date,
+          note: note,
+        );
+        await _fetchCategories();
+      } else {
+        final createdApiTx = await _transactionRepo.createTransaction(
+          categoryId: matchingCategory.id,
+          type: _type,
+          amount: amount,
+          date: _date,
+          notes: note,
+        );
+
+        // Adds the row to the ledger and rolls the amount into the matching
+        // budget category so its "actual" progress updates immediately.
+        FinanceProvider().addTransaction(
+          createdApiTx.toLocalModel(fallbackCategory: matchingCategory.name),
+        );
+      }
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -428,11 +494,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     icon: Icons.arrow_upward_rounded,
                     selected: _type == TransactionType.expense,
                     color: tc.red,
-                    onTap: () => setState(() {
-                      _type = TransactionType.expense;
-                      _category = null;
-                      _selectedTarget = null;
-                    }),
+                    onTap: () {
+                      setState(() {
+                        _type = TransactionType.expense;
+                        _category = null;
+                        _selectedTarget = null;
+                      });
+                      if (_cards.isEmpty) _fetchCards();
+                    },
                   ),
                   _TypeBtn(
                     label: 'Income',
@@ -443,6 +512,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       _type = TransactionType.income;
                       _category = null;
                       _selectedTarget = null;
+                      _paidWithCardId = null;
                     }),
                   ),
                   _TypeBtn(
@@ -455,6 +525,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         _type = TransactionType.transferOut;
                         _category = null;
                         _selectedTarget = null;
+                        _paidWithCardId = null;
                       });
                       if (_goals.isEmpty && _loans.isEmpty) {
                         _fetchTransferTargets();
@@ -542,6 +613,28 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               ],
             ],
             const SizedBox(height: 16),
+
+            // ── Payment source (expenses only): cash/bank or a credit card.
+            // Hidden when the user has no cards, so the sheet stays as short as
+            // it used to be for anyone not using credit.
+            if (_type == TransactionType.expense &&
+                (_loadingCards || _cards.isNotEmpty)) ...[
+              _Label('Paid with', tc),
+              const SizedBox(height: 8),
+              _CreditCardPicker(
+                cards: _cards,
+                selectedCardId: _paidWithCardId,
+                loading: _loadingCards,
+                accentColor: accentColor,
+                tc: tc,
+                onChanged: (id) => setState(() => _paidWithCardId = id),
+              ),
+              if (_selectedCard != null) ...[
+                const SizedBox(height: 8),
+                _CardLimitHint(card: _selectedCard!, tc: tc),
+              ],
+              const SizedBox(height: 16),
+            ],
 
             // ── Date
             _Label('Date', tc),
@@ -1030,4 +1123,152 @@ class _Label extends StatelessWidget {
           letterSpacing: 0.8,
         ),
       );
+}
+
+// ── Credit card payment source picker ─────────────────────────────────────────
+/// Expense funding source: "Cash / bank account" plus every saved card.
+///
+/// The card list is optional — when the user has no cards yet the picker simply
+/// stays on cash, so adding an expense never depends on the credit card setup.
+class _CreditCardPicker extends StatelessWidget {
+  const _CreditCardPicker({
+    required this.cards,
+    required this.selectedCardId,
+    required this.loading,
+    required this.accentColor,
+    required this.tc,
+    required this.onChanged,
+  });
+
+  /// Sentinel shown in the dropdown for "not paid by a card".
+  static const int _cashValue = -1;
+
+  final List<CreditCardModel> cards;
+  final int? selectedCardId;
+  final bool loading;
+  final Color accentColor;
+  final ThemeColors tc;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading && cards.isEmpty) {
+      return Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: tc.surface2,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: accentColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tc.surface2,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: selectedCardId ?? _cashValue,
+          dropdownColor: tc.surface2,
+          isExpanded: true,
+          iconEnabledColor: tc.text40,
+          borderRadius: BorderRadius.circular(14),
+          items: [
+            DropdownMenuItem<int>(
+              value: _cashValue,
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      color: tc.text40, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Cash / bank account',
+                    style: AppTypography.bodySm.copyWith(color: tc.text100),
+                  ),
+                ],
+              ),
+            ),
+            for (final card in cards)
+              DropdownMenuItem<int>(
+                value: card.id,
+                child: Row(
+                  children: [
+                    Icon(Icons.credit_card_rounded,
+                        color: accentColor, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        card.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySm.copyWith(color: tc.text100),
+                      ),
+                    ),
+                    Text(
+                      fmtCardMoney(card.availableCredit),
+                      style: AppTypography.bodySm.copyWith(
+                        color: tc.text40,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          onChanged: (v) => onChanged(v == null || v == _cashValue ? null : v),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Selected card limit hint ──────────────────────────────────────────────────
+/// One line under the picker telling the user how much room is left on the
+/// chosen card, so an over-limit expense is obvious before it is submitted.
+class _CardLimitHint extends StatelessWidget {
+  const _CardLimitHint({required this.card, required this.tc});
+
+  final CreditCardModel card;
+  final ThemeColors tc;
+
+  @override
+  Widget build(BuildContext context) {
+    final overLimit = card.outstanding >= card.creditLimit;
+    final color = overLimit ? tc.red : tc.text40;
+
+    return Row(
+      children: [
+        Icon(
+          overLimit ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+          size: 14,
+          color: color,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            overLimit
+                ? 'Limit reached — this card has no credit left.'
+                : '${fmtCardMoney(card.availableCredit)} available of '
+                    '${fmtCardMoney(card.creditLimit)}',
+            style: AppTypography.bodySm.copyWith(
+              color: color,
+              fontSize: 11,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

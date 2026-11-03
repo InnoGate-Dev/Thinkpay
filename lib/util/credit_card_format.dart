@@ -1,5 +1,7 @@
 // ── Formatting & date helpers shared across the credit card feature ──────────
 
+import 'package:flutter/material.dart';
+import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/utils/number_format.dart';
 
 const List<String> _months = [
@@ -31,6 +33,15 @@ String ordinalDay(int day) {
 
 /// Short date without the year, e.g. Mar 5.
 String fmtShortDate(DateTime d) => '${_months[d.month - 1]} ${d.day}';
+
+/// Colour for a used-credit progress bar, ramping from calm to alarming as
+/// [utilisation] (0..1) approaches the limit.
+Color creditUtilisationColor(ThemeColors tc, double utilisation) {
+  if (utilisation >= 0.9) return tc.red;
+  if (utilisation >= 0.7) return tc.accentExpense;
+  if (utilisation >= 0.4) return tc.accent;
+  return tc.intelligenceAccent;
+}
 
 /// Day 31 doesn't exist in every month, so clamp to the last day of the month.
 DateTime statementCloseFor(int year, int month, int day) {

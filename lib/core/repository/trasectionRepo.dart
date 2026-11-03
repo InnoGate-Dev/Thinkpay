@@ -17,6 +17,7 @@ class ApiTransaction {
   final double amount;
   final DateTime date;
   final int? goalId;
+
   final String? categoryName;
   final DateTime? createdAt;
 

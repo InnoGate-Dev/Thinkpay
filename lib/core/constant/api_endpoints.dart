@@ -58,6 +58,13 @@ class ApiEndpoints {
   static const String creditCards = '/credit-cards';
   static String creditCardById(int id) => '/credit-cards/$id';
 
+  /// Credit card spending entries themselves (`POST` / `GET`).
+  static const String creditCardTransactions = '/credit-card-transactions';
+
+  /// Entries charged to one card (`GET`, paginated).
+  static String creditCardTransactionsByCard(int id) =>
+      '/credit-cards/$id/transactions';
+
   // goal transaction
 
   static const String goalTrasections = '/goaltransactions';

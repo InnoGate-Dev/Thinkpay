@@ -17,6 +17,7 @@ class CreditCardModel {
     required this.apr,
     required this.statementDay,
     required this.graceDays,
+    this.outstanding = 0,
     this.createdAt,
     this.updatedAt,
   });
@@ -34,6 +35,10 @@ class CreditCardModel {
   /// Days from statement close to payment due date.
   final int graceDays;
 
+  /// Used credit (money spent with the card that has not been paid back).
+  /// The backend derives it from the ledger, so it is read-only here.
+  final double outstanding;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -45,6 +50,7 @@ class CreditCardModel {
       apr: _parseDouble(json['apr']),
       statementDay: _parseInt(json['statement_day']) ?? 1,
       graceDays: _parseInt(json['grace_days']) ?? 21,
+      outstanding: _parseDouble(json['outstanding']),
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
     );
@@ -70,6 +76,7 @@ class CreditCardModel {
     double? apr,
     int? statementDay,
     int? graceDays,
+    double? outstanding,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -80,9 +87,26 @@ class CreditCardModel {
       apr: apr ?? this.apr,
       statementDay: statementDay ?? this.statementDay,
       graceDays: graceDays ?? this.graceDays,
+      outstanding: outstanding ?? this.outstanding,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  // ── Derived credit figures ─────────────────────────────────────────────────
+
+  /// Credit still available to spend.
+  double get availableCredit {
+    final left = creditLimit - outstanding;
+    return left < 0 ? 0 : left;
+  }
+
+  /// Share of the limit already used, clamped to 0..1 for progress bars.
+  double get utilisation {
+    if (creditLimit <= 0) return 0;
+    final ratio = outstanding / creditLimit;
+    if (ratio.isNaN || ratio <= 0) return 0;
+    return ratio > 1 ? 1 : ratio;
   }
 
   // ── Derived schedule ───────────────────────────────────────────────────────
