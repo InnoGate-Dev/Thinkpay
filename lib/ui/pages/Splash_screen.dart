@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../../core/repository/userRepo.dart';
+import '../../providers/profile_sync.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,6 +29,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (loggedIn) {
+      // Load the profile before leaving the splash so the saved appearance and
+      // currency are in place when the first screen paints.
+      await ProfileSync.ensureLoaded();
+      if (!mounted) return;
       // Valid, non-expired token found — go straight to dashboard
       Navigator.of(context).pushReplacementNamed('/home');
     } else {

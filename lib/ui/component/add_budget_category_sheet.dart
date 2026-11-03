@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/errors/exceptions.dart';
 import 'package:Thinkpay/core/repository/categoryRepo.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/model/budget_model.dart';
 import 'package:Thinkpay/model/categoryModel.dart';
 import 'package:Thinkpay/model/transaction_model.dart';
@@ -252,7 +253,7 @@ class _AddBudgetCategorySheetState extends State<AddBudgetCategorySheet> {
               tc: tc),
           const SizedBox(height: 14),
 
-          _Label('Expected Amount (Rs.)', tc),
+          _Label('Expected Amount ($activeCurrencySymbol)', tc),
           const SizedBox(height: 6),
           _Field(
               controller: _amountCtrl,

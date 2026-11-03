@@ -57,7 +57,8 @@ IconData _categoryIcon(String cat) {
 }
 
 // Expose them as public functions
-/// Compact amount for cards and rows: 1.25M / 150K / 25,000 / 450.
-String formatAmount(double v) => compactNumber(v);
+/// Compact amount for cards and rows, prefixed with the currency the user
+/// picked in their profile: `Rs. 1.25M` / `$ 150K` / `Rs. 25,000`.
+String formatAmount(double v) => compactMoney(v);
 String formatDate(DateTime d) => _dateStr(d);
 IconData getCategoryIcon(String cat) => _categoryIcon(cat);

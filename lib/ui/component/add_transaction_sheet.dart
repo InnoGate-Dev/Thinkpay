@@ -6,6 +6,7 @@ import '../../core/repository/goalRepo.dart';
 import '../../core/repository/goalTrasection.dart';
 import '../../core/repository/loanRepo.dart';
 import '../../core/repository/trasectionRepo.dart';
+import '../../core/utils/number_format.dart';
 import '../../model/budget_model.dart';
 import '../../model/goal_model.dart';
 import '../../model/loan_model.dart';
@@ -466,7 +467,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             const SizedBox(height: 20),
 
             // ── Amount
-            _Label('Amount (Rs.)', tc),
+            _Label('Amount ($activeCurrencySymbol)', tc),
             const SizedBox(height: 8),
             _AmountField(
               controller: _amountCtrl,
@@ -877,12 +878,20 @@ class _AmountFieldState extends State<_AmountField> {
               borderRadius: BorderRadius.circular(9),
             ),
             child: Center(
-              child: Text(
-                'Rs',
-                style: AppTypography.labelCaps.copyWith(
-                  color: widget.accentColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              // Shrinks instead of overflowing: some symbols (`Rs.`, `AED`) are
+              // wider than the fixed badge.
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    activeCurrencySymbol,
+                    style: AppTypography.labelCaps.copyWith(
+                      color: widget.accentColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ),

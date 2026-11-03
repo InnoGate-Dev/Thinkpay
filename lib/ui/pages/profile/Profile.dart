@@ -1,14 +1,32 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/constant/theme_provider.dart';
-import 'package:Thinkpay/core/utils/number_format.dart';
 import 'package:Thinkpay/providers/finance_provider.dart';
+import 'package:Thinkpay/providers/profile_sync.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
-import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
-import 'package:Thinkpay/core/repository/userRepo.dart';
-import 'package:Thinkpay/core/errors/exceptions.dart';
 import 'package:Thinkpay/ui/pages/profile/ChangePassword.dart';
+import 'package:Thinkpay/ui/pages/profile/EditProfile.dart';
+import 'package:Thinkpay/ui/pages/profile/profile_settings.dart';
+import 'package:Thinkpay/ui/pages/profile/profile_widgets.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The screen is a short stack of groups, ordered by how often they are used:
+//
+//   header    who you are, plus the country and currency the app renders with
+//   glance    your numbers, already formatted in that currency
+//   account   personal details, password, appearance
+//   advanced  country, currency and the delete door
+//
+// Country and currency sit under Advanced because they are set once and then
+// forgotten — and because the currency one needs explaining every time: it
+// swaps the symbol in front of an amount, it never converts the amount. That
+// warning is repeated on the sheet, in the confirm dialog and as the row's
+// subtitle, since an exchange-rate assumption here would quietly mislead about
+// what the user's money is worth.
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -19,212 +37,248 @@ class Profile extends StatefulWidget {
 
 class _ProfileState extends State<Profile> {
   final _store = UserProfileStore();
-  bool _loading = false;
   String? _loadError;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _refresh();
   }
 
-  Future<void> _loadProfile() async {
-    setState(() { _loading = true; _loadError = null; });
-    try {
-      _store.setUser(await UserRepository().getProfile());
-    } on ApiException catch (e) {
-      _loadError = e.message;
-    } catch (e) {
-      _loadError = e.toString();
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+  /// Pulls the latest profile. Runs on open so the country/currency shown here
+  /// always match the backend, and again on pull-to-refresh.
+  Future<void> _refresh() async {
+    if (mounted) setState(() => _loadError = null);
+    final ok = await ProfileSync.ensureLoaded(force: true);
+    if (!mounted || ok) return;
+    setState(() {
+      _loadError = 'We could not refresh your profile. Check your connection '
+          'and try again.';
+    });
   }
+
+  void _open(Widget page) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {
-    final provider = FinanceProvider();
-    final profileStore = UserProfileStore();
+    final finance = FinanceProvider();
 
     return ListenableBuilder(
-      listenable: Listenable.merge([provider, ThemeNotifier(), profileStore]),
+      listenable: Listenable.merge([finance, ThemeNotifier(), _store]),
       builder: (context, _) {
-        final tc       = ThemeColors.of(context);
-        final txCount  = provider.transactions.length;
-        final balance  = provider.balance;
-        final income   = provider.totalIncome;
-        final expenses = provider.totalExpenses;
-        final months   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        final tc = ThemeColors.of(context);
+        final isDark = ThemeNotifier().isDark;
 
         return Scaffold(
           backgroundColor: tc.background,
           appBar: AppBar(
-            backgroundColor: tc.surface,
+            backgroundColor: tc.background,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
-            titleSpacing: 20,
-            title: Text('Profile',
-                style: TextStyle(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w700)),
+            titleSpacing: AppSpacing.marginMobile,
+            title: Text(
+              'Profile',
+              style: AppTypography.headlineMd.copyWith(
+                color: tc.text100,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             actions: [
               IconButton(
-                icon: Icon(Icons.edit_outlined, color: tc.lime, size: 22),
-                tooltip: 'Edit Profile',
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                ),
+                onPressed: () => _open(const EditProfilePage()),
+                tooltip: 'Edit profile',
+                icon: Icon(Icons.edit_outlined, color: tc.lime, size: 21),
               ),
+              const SizedBox(width: AppSpacing.xs),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
-            children: [
-              if (_loading) const LinearProgressIndicator(),
-              if (_loadError != null)
-                Card(color: tc.surface, child: ListTile(
-                  title: Text('Could not load profile', style: TextStyle(color: tc.text100)),
-                  subtitle: Text(_loadError!, style: TextStyle(color: tc.text40)),
-                  trailing: IconButton(icon: Icon(Icons.refresh, color: tc.lime), onPressed: _loadProfile),
-                )),
-              // ── Avatar + info ───────────────────────────────────────────
-              Center(
-                child: Column(children: [
-                  Container(
-                    width: 88, height: 88,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [tc.cardGradientStart, tc.cardGradientEnd],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(color: tc.limeBorder, width: 2),
-                    ),
-                    child: Icon(Icons.person_rounded, color: tc.lime, size: 44),
+          body: RefreshIndicator(
+            color: tc.lime,
+            backgroundColor: tc.surface,
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.marginMobile,
+                AppSpacing.base,
+                AppSpacing.marginMobile,
+                110,
+              ),
+              children: [
+                if (_loadError != null)
+                  ProfileErrorBanner(
+                    tc: tc,
+                    message: _loadError!,
+                    onRetry: _refresh,
                   ),
-                  const SizedBox(height: 14),
-                  Text(profileStore.name,
-                      style: TextStyle(color: tc.text100, fontSize: 22, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(profileStore.email,
-                      style: TextStyle(color: tc.text40, fontSize: 13)),
-                  if (profileStore.birthday != null) ...[
-                    const SizedBox(height: 4),
-                    Text('Birthday: ${_formatBirthday(profileStore.birthday!)}', style: TextStyle(color: tc.text40, fontSize: 12)),
-                  ],
-                  if (profileStore.isLeader) ...[
-                    const SizedBox(height: 8),
-                    Chip(label: const Text('Leader'), backgroundColor: tc.lime.withValues(alpha: .15), labelStyle: TextStyle(color: tc.lime)),
-                  ],
-                  if (profileStore.phone.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(profileStore.phone,
-                        style: TextStyle(color: tc.text40, fontSize: 12)),
-                  ],
-                  const SizedBox(height: 8),
-                  if (profileStore.bio.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(profileStore.bio,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: tc.text40, fontSize: 13)),
+                ProfileHeader(store: _store, tc: tc),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── At a glance ───────────────────────────────────────────
+                ProfileSectionLabel(
+                  label: 'At a glance',
+                  tc: tc,
+                  trailing: Text(
+                    _store.currencyCode,
+                    style: AppTypography.labelCaps.copyWith(
+                      color: tc.text40,
+                      fontSize: 10,
+                      letterSpacing: 1,
                     ),
-                  ],
-                ]),
-              ),
-              const SizedBox(height: 28),
-
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.lock_outline, color: tc.lime),
-                title: Text('Change password', style: TextStyle(color: tc.text100, fontWeight: FontWeight.w600)),
-                trailing: Icon(Icons.chevron_right, color: tc.text40),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordPage())),
-              ),
-
-              // ── Stats row ──────────────────────────────────────────────
-              Row(children: [
-                _StatCard(label: 'Transactions', value: '$txCount', icon: Icons.receipt_long_rounded, tc: tc),
-                const SizedBox(width: 12),
-                _StatCard(label: 'Balance', value: compactMoney(balance), icon: Icons.account_balance_wallet_rounded, valueColor: balance >= 0 ? tc.lime : tc.red, tc: tc),
-              ]),
-              const SizedBox(height: 12),
-              Row(children: [
-                _StatCard(label: 'Total Income', value: compactMoney(income), icon: Icons.arrow_downward_rounded, valueColor: tc.lime, tc: tc),
-                const SizedBox(width: 12),
-                _StatCard(label: 'Total Expenses', value: compactMoney(expenses), icon: Icons.arrow_upward_rounded, valueColor: tc.red, tc: tc),
-              ]),
-              const SizedBox(height: 24),
-
-              // ── Monthly chart ──────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: tc.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: tc.border),
+                  ),
                 ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Monthly Overview',
-                      style: TextStyle(color: tc.text100, fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text('Income vs Expenses (last 6 months)',
-                      style: TextStyle(color: tc.text40, fontSize: 11)),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 160,
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: income > 0 ? income * 1.2 : 100000,
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (_) =>
-                              FlLine(color: tc.border, strokeWidth: 1),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        titlesData: FlTitlesData(
-                          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (v, _) => Text(months[v.toInt() % months.length],
-                                  style: TextStyle(color: tc.text40, fontSize: 10)),
-                            ),
-                          ),
-                        ),
-                        barGroups: List.generate(6, (i) {
-                          final frac = (i + 1) / 6;
-                          return BarChartGroupData(x: i, barRods: [
-                            BarChartRodData(
-                              toY: income * frac * 0.9,
-                              color: tc.lime.withValues(alpha: 0.7),
-                              width: 10,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            BarChartRodData(
-                              toY: expenses * frac * 0.85,
-                              color: tc.red.withValues(alpha: 0.7),
-                              width: 10,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ]);
-                        }),
+                _StatGrid(
+                  tiles: [
+                    ProfileStatTile(
+                      tc: tc,
+                      label: 'Transactions',
+                      value: '${finance.transactions.length}',
+                      icon: Icons.receipt_long_rounded,
+                    ),
+                    ProfileStatTile(
+                      tc: tc,
+                      label: 'Balance',
+                      value: profileMoney(finance.balance, _store),
+                      icon: Icons.account_balance_wallet_rounded,
+                      valueColor: finance.balance >= 0 ? tc.lime : tc.red,
+                    ),
+                    ProfileStatTile(
+                      tc: tc,
+                      label: 'Total income',
+                      value: profileMoney(finance.totalIncome, _store),
+                      icon: Icons.south_west_rounded,
+                      valueColor: tc.lime,
+                    ),
+                    ProfileStatTile(
+                      tc: tc,
+                      label: 'Total expenses',
+                      value: profileMoney(finance.totalExpenses, _store),
+                      icon: Icons.north_east_rounded,
+                      valueColor: tc.red,
+                    ),
+                  ],
+                ),
+
+                // ── Account ───────────────────────────────────────────────
+                const SizedBox(height: AppSpacing.md),
+                ProfileSectionLabel(label: 'Account', tc: tc),
+                ProfileSettingsCard(
+                  tc: tc,
+                  children: [
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(
+                        tc: tc,
+                        icon: Icons.badge_outlined,
+                      ),
+                      title: 'Personal details',
+                      subtitle: 'Name, email and birthday',
+                      onTap: () => _open(const EditProfilePage()),
+                    ),
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(
+                        tc: tc,
+                        icon: Icons.lock_outline_rounded,
+                      ),
+                      title: 'Password',
+                      subtitle: 'Change your password',
+                      onTap: () => _open(const ChangePasswordPage()),
+                    ),
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(
+                        tc: tc,
+                        icon: isDark
+                            ? Icons.dark_mode_outlined
+                            : Icons.light_mode_outlined,
+                      ),
+                      title: 'Appearance',
+                      subtitle: isDark ? 'Dark theme' : 'Light theme',
+                      trailing: Switch.adaptive(
+                        value: isDark,
+                        onChanged: (_) => toggleProfileTheme(context),
+                        activeThumbColor: tc.background,
+                        activeTrackColor: tc.lime,
+                        inactiveThumbColor: tc.text40,
+                        inactiveTrackColor: tc.surface3,
                       ),
                     ),
+                  ],
+                ),
+
+                // ── Advanced ──────────────────────────────────────────────
+                const SizedBox(height: AppSpacing.md),
+                ProfileSectionLabel(label: 'Advanced', tc: tc),
+                ProfileSettingsCard(
+                  tc: tc,
+                  children: [
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(tc: tc, text: _store.countryFlag),
+                      title: 'Country',
+                      subtitle: 'Changes the flag shown on your profile',
+                      value: _store.hasCountry ? _store.country : 'Not set',
+                      busy: _store.isSavingConfig,
+                      onTap: () => showProfileCountryPicker(context),
+                    ),
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(
+                        tc: tc,
+                        text: _store.currencySymbol,
+                      ),
+                      title: 'Currency',
+                      subtitle: 'Symbol only — your amounts are not converted',
+                      value: '${_store.currencyCode} · ${_store.currencySymbol}',
+                      busy: _store.isSavingConfig,
+                      onTap: () => showProfileCurrencyPicker(context),
+                    ),
+                    ProfileSettingsRow(
+                      tc: tc,
+                      leading: ProfileIconBadge(
+                        tc: tc,
+                        icon: Icons.delete_outline_rounded,
+                        danger: true,
+                      ),
+                      title: 'Delete account',
+                      subtitle: 'Deactivated now, removed after 30 days',
+                      danger: true,
+                      onTap: () => showDeleteAccountSheet(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.base),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
                   ),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    _Legend(color: tc.lime, label: 'Income', tc: tc),
-                    const SizedBox(width: 16),
-                    _Legend(color: tc.red, label: 'Expenses', tc: tc),
-                  ]),
-                ]),
-              ),
-            ],
+                  child: Text(
+                    'Changing your country or currency changes how amounts are '
+                    'displayed — the numbers themselves stay exactly the same.',
+                    style: AppTypography.bodySm.copyWith(
+                      color: tc.text40,
+                      fontSize: 11,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+                Center(
+                  child: Text(
+                    'DayOne · ThinkPay',
+                    style: AppTypography.labelCaps.copyWith(
+                      color: tc.text20,
+                      fontSize: 10,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -232,38 +286,38 @@ class _ProfileState extends State<Profile> {
   }
 }
 
-String _formatBirthday(DateTime date) =>
-    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+// ─────────────────────────────────────────────────────────────────────────────
+// Two-column stat grid
+// ─────────────────────────────────────────────────────────────────────────────
+/// Lays tiles out two per row and equalises their heights, so a long label in
+/// one tile never leaves its neighbour looking cropped.
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.tiles});
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value, required this.icon, required this.tc, this.valueColor});
-  final String label, value; final IconData icon; final ThemeColors tc; final Color? valueColor;
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: tc.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: tc.border)),
-          child: Row(children: [
-            Icon(icon, color: tc.text40, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TextStyle(color: tc.text40, fontSize: 11)),
-              const SizedBox(height: 2),
-              Text(value, style: TextStyle(color: valueColor ?? tc.text100, fontSize: 13, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
-            ])),
-          ]),
-        ));
-}
+  final List<Widget> tiles;
 
-// ── Chart legend ───────────────────────────────────────────────────────────────
-class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label, required this.tc});
-  final Color color; final String label; final ThemeColors tc;
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(color: tc.text40, fontSize: 11)),
-      ]);
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < tiles.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.sm),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: tiles[i]),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: i + 1 < tiles.length
+                      ? tiles[i + 1]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }

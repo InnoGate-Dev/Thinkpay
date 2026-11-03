@@ -24,6 +24,22 @@ const List<String> _scaleSuffixes = <String>['', 'K', 'M', 'B', 'T'];
 /// Symbol used when a caller has no currency context (the app's historic "Rs.").
 const String kDefaultCurrencySymbol = 'Rs.';
 
+/// The currency symbol every amount falls back to when the caller does not pass
+/// one. [UserProfileStore] keeps it in step with the currency saved in
+/// `profile_config`, so a user who switched to `$` sees dollars everywhere
+/// without every call site having to thread the symbol through.
+String _activeCurrencySymbol = kDefaultCurrencySymbol;
+
+/// Symbol in force for callers that do not name one.
+String get activeCurrencySymbol => _activeCurrencySymbol;
+
+/// Points the default symbol at the user's chosen currency. An empty value
+/// restores the built-in default rather than rendering amounts without one.
+void setActiveCurrencySymbol(String symbol) {
+  final next = symbol.trim();
+  _activeCurrencySymbol = next.isEmpty ? kDefaultCurrencySymbol : next;
+}
+
 /// Values below this are shown in full (`25,000`); values above it are
 /// abbreviated (`150K`, `1.25M`). 100,000 keeps everyday amounts exact while
 /// cutting the numbers that used to turn into "10L".
@@ -93,10 +109,12 @@ String compactNumber(
 
 /// Compact money with the currency symbol in front, e.g. `Rs. 1.25M`.
 ///
+/// [symbol] defaults to the active currency ([activeCurrencySymbol]), so the
+/// amount follows the currency chosen in the profile settings.
 /// The sign always leads: `-Rs. 450`, never `Rs. -450`.
 String compactMoney(
   num value, {
-  String symbol = kDefaultCurrencySymbol,
+  String? symbol,
   int? decimals,
   num compactFrom = kCompactThreshold,
 }) =>
@@ -107,7 +125,7 @@ String compactMoney(
         decimals: decimals,
         compactFrom: compactFrom,
       ),
-      symbol,
+      symbol ?? activeCurrencySymbol,
     );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,16 +162,18 @@ String groupedNumber(
 }
 
 /// Grouped money with the currency symbol in front, e.g. `Rs. 1,500,000`.
+///
+/// [symbol] defaults to the active currency ([activeCurrencySymbol]).
 String groupedMoney(
   num value, {
-  String symbol = kDefaultCurrencySymbol,
+  String? symbol,
   int decimals = 2,
   bool trimZeros = true,
 }) =>
     _withSymbol(
       value,
       groupedNumber(value.abs(), decimals: decimals, trimZeros: trimZeros),
-      symbol,
+      symbol ?? activeCurrencySymbol,
     );
 
 // ─────────────────────────────────────────────────────────────────────────────

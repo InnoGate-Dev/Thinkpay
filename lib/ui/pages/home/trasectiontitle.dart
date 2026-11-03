@@ -70,7 +70,7 @@ class TransactionTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isIncome ? '+' : '−'} Rs. ${formatAmount(transaction.amount)}',
+                '${isIncome ? '+' : '−'} ${formatAmount(transaction.amount)}',
                 style: GoogleFonts.manrope(
                   color: isIncome ? tc.coreAction : tc.text100,
                   fontSize: 14,

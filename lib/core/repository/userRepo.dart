@@ -1,4 +1,5 @@
 import '../../model/auth_responceModel.dart';
+import '../../model/account_deletion_schedule.dart';
 import '../../model/userModel.dart';
 import '../../model/dashboardModel.dart';
 import '../../services/auth_service.dart';
@@ -110,6 +111,33 @@ class UserRepository {
       currentPassword: currentPassword,
       newPassword: newPassword,
     );
+  }
+
+  /// Saves the profile preferences and returns the refreshed profile.
+  ///
+  /// Only the values passed are written: leaving the currency out keeps the one
+  /// already stored, so toggling the theme cannot reset it. Changing the
+  /// currency never converts existing amounts; the backend only stores the code
+  /// so the app can render the matching symbol.
+  Future<User> updateProfileConfig({
+    String country = '',
+    String currency = '',
+    String theme = '',
+  }) async => _parseUserResponse(
+        await _userService.updateProfileConfig(
+          country: country,
+          currency: currency,
+          theme: theme,
+        ),
+      );
+
+  /// Schedules the deletion of the account on the backend, then drops the local
+  /// session so the app can never keep talking to the API with the token of a
+  /// deactivated profile.
+  Future<AccountDeletionSchedule> deleteAccount() async {
+    final raw = await _userService.deleteAccount();
+    await _tokenStorage.deleteToken();
+    return AccountDeletionSchedule.fromJson(raw);
   }
 
   User _parseUserResponse(Map<String, dynamic> response) {

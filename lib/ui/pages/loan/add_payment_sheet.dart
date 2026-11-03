@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../model/loan_model.dart';
@@ -119,7 +120,7 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.manrope(color: tc.text100, fontSize: 15, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
-                prefixText: 'Rs. ',
+                prefixText: '$activeCurrencySymbol ',
                 filled: true,
                 fillColor: tc.surface2,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

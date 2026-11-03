@@ -13,6 +13,9 @@ class ApiEndpoints {
   static const String currentUser = '/users/me';
   static const String changePassword = '/users/me/password';
 
+  /// Country + currency stored in `profile_config` (PUT).
+  static const String profileConfig = '/users/me/profile-config';
+
   // Leader
   static const String leaderDashboard = '/leader/dashboard';
 

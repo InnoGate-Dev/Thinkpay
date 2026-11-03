@@ -232,7 +232,7 @@ class _AddGoalSheetState extends State<AddGoalSheet> {
             ),
             const SizedBox(height: 14),
 
-            _Label('Target Amount (Rs.)', tc),
+            _Label('Target Amount ($activeCurrencySymbol)', tc),
             const SizedBox(height: 6),
             _Field(
               controller: _targetAmountCtrl,
@@ -516,7 +516,7 @@ class _AddAmountToGoalSheetState extends State<AddAmountToGoalSheet> {
           ),
           const SizedBox(height: 16),
 
-          _Label('Amount to Add (Rs.)', tc),
+          _Label('Amount to Add ($activeCurrencySymbol)', tc),
           const SizedBox(height: 6),
           _Field(
             controller: _amountCtrl,

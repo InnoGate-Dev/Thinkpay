@@ -854,7 +854,7 @@ class _FinanceCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Rs. ${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
+                  '${_fmt(actual)} ${b.type == TransactionType.expense ? 'spent' : 'received'}',
                   style: GoogleFonts.inter(
                     color: bar,
                     fontSize: 12,
@@ -862,7 +862,7 @@ class _FinanceCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  hasTarget ? 'of Rs. ${_fmt(expected)}' : 'no planned amount',
+                  hasTarget ? 'of ${_fmt(expected)}' : 'no planned amount',
                   style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
                 ),
               ],
@@ -1010,7 +1010,7 @@ class _VirtualTransferItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Rs. ${_fmt(actual)} transferred',
+                  '${_fmt(actual)} transferred',
                   style: GoogleFonts.inter(
                     color: color,
                     fontSize: 12,
@@ -1018,7 +1018,7 @@ class _VirtualTransferItem extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'of Rs. ${_fmt(target)}',
+                  'of ${_fmt(target)}',
                   style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
                 ),
               ],
@@ -1085,7 +1085,7 @@ class _SummaryRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Rs. ${_fmt(totalExpected)}',
+                  _fmt(totalExpected),
                   style: GoogleFonts.manrope(
                     color: tc.text100,
                     fontSize: 18,
@@ -1132,7 +1132,7 @@ class _SummaryRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Rs. ${_fmt(totalActual)}',
+                    _fmt(totalActual),
                     style: GoogleFonts.manrope(
                       color: accent,
                       fontSize: 18,
@@ -1150,7 +1150,7 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-String _fmt(double v) => compactNumber(v);
+String _fmt(double v) => compactMoney(v);
 
 /// Resolves the "actual" figure shown for every category in [budgets].
 ///

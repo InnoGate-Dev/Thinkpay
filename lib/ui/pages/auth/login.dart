@@ -1,4 +1,5 @@
 import 'package:Thinkpay/core/repository/userRepo.dart';
+import 'package:Thinkpay/providers/profile_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,6 +26,37 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
+  /// Fetches the saved profile preferences and ends the sign-in afterwards.
+  ///
+  /// The auth response carries the identity but not `profile_config`, so the
+  /// appearance and currency the user picked are only known after this call —
+  /// and doing it here means the first screen after login already renders in
+  /// the right theme with the right currency symbol.
+  Future<void> _enterApp(bool deletionCancelled) async {
+    await ProfileSync.ensureLoaded(force: true);
+    if (!mounted) return;
+    _announceRestoredAccount(deletionCancelled);
+    Navigator.pushReplacementNamed(context, '/home');
+  }
+
+  /// Tells the user their account is back when this sign-in landed inside the
+  /// 30-day deletion window: the backend reactivated the profile instead of
+  /// letting the scheduled scrub go ahead.
+  void _announceRestoredAccount(bool deletionCancelled) {
+    if (!deletionCancelled) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Welcome back — your scheduled deletion was cancelled and your '
+            'profile is active again.',
+          ),
+          duration: Duration(seconds: 6),
+        ),
+      );
+  }
+
   Future<void> _handleEmailLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -40,7 +72,7 @@ class _LoginState extends State<Login> {
       );
       if (!mounted) return;
       if (response.token.isNotEmpty) {
-        Navigator.pushReplacementNamed(context, '/home');
+        await _enterApp(response.deletionCancelled);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -123,7 +155,7 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       if (response.token.isNotEmpty) {
-        Navigator.pushReplacementNamed(context, '/home');
+        await _enterApp(response.deletionCancelled);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Sign-in failed. Please try again.')),

@@ -1,150 +1,364 @@
 import 'package:flutter/material.dart';
+
 import 'package:Thinkpay/core/constant/app_colors.dart';
 import 'package:Thinkpay/core/constant/theme_provider.dart';
 import 'package:Thinkpay/core/repository/userRepo.dart';
+import 'package:Thinkpay/providers/profile_sync.dart';
 import 'package:Thinkpay/providers/user_profile_store.dart';
 import 'package:Thinkpay/ui/pages/profile/Profile.dart';
+import 'package:Thinkpay/ui/pages/profile/profile_settings.dart';
+import 'package:Thinkpay/ui/pages/profile/profile_widgets.dart';
 import 'package:Thinkpay/ui/pages/security/security.dart';
 import 'package:Thinkpay/ui/pages/support/support.dart';
 
-class ProfileDrawer extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation drawer
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The drawer is the first place people look to check who they are signed in as,
+// so it loads the profile itself rather than trusting whatever the store holds.
+// On a cold start the store still has the signed-out placeholder, which is why
+// the header used to read "User / user@thinkpay.app"; [ProfileSync] shares one
+// request with whoever else asked first.
+//
+// Items live in the same two bands as the profile screen — General for the
+// everyday destinations, Advanced for the settings that change how the app
+// behaves — so the two surfaces never disagree about where something is.
+
+class ProfileDrawer extends StatefulWidget {
   const ProfileDrawer({super.key});
 
-  // Navigate to a page and close drawer
-  void _navigate(BuildContext context, Widget page) {
-    Navigator.pop(context); // close drawer
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  @override
+  State<ProfileDrawer> createState() => _ProfileDrawerState();
+}
+
+class _ProfileDrawerState extends State<ProfileDrawer> {
+  final _store = UserProfileStore();
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
 
-  void _showCurrencyPicker(BuildContext context, ThemeColors tc) {
-    final store = UserProfileStore();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _CurrencyPickerSheet(tc: tc, store: store),
-    );
+  Future<void> _load() async {
+    if (_failed) setState(() => _failed = false);
+    final ok = await ProfileSync.ensureLoaded();
+    if (!mounted || ok) return;
+    setState(() => _failed = true);
+  }
+
+  /// Leaves the drawer and opens a full page on the shell's navigator.
+  void _navigate(Widget page) {
+    final navigator = Navigator.of(context);
+    navigator.pop(); // close the drawer
+    navigator.push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  /// Closes the drawer, then runs [open] on the page underneath: a bottom sheet
+  /// cannot be shown while the drawer route is still animating out, and this
+  /// drawer's own context dies with it.
+  Future<void> _openAfterClose(void Function(BuildContext host) open) async {
+    final host = Navigator.of(context).context;
+    Scaffold.maybeOf(context)?.closeDrawer();
+    await Future<void>.delayed(const Duration(milliseconds: 260));
+    if (!host.mounted) return;
+    open(host);
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([ThemeNotifier(), UserProfileStore()]),
+      listenable: Listenable.merge([ThemeNotifier(), _store]),
       builder: (context, _) {
-        final isDark    = ThemeNotifier().isDark;
-        final tc        = ThemeColors.of(context);
-        final store     = UserProfileStore();
-        final currency  = store.selectedCurrency;
+        final tc = ThemeColors.of(context);
+        final isDark = ThemeNotifier().isDark;
 
-        return Column(
-          children: [
-            // ── Drawer header with user info ─────────────────────────────
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [tc.cardGradientStart, tc.cardGradientEnd],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border(bottom: BorderSide(color: tc.border)),
+        return ColoredBox(
+          color: tc.background,
+          child: Column(
+            children: [
+              _DrawerHeader(
+                store: _store,
+                tc: tc,
+                failed: _failed,
+                onRetry: _load,
               ),
-              padding: EdgeInsets.fromLTRB(
-                  20, MediaQuery.of(context).padding.top + 20, 20, 20),
-              child: Row(children: [
-                Container(
-                  width: 56, height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: tc.limeDim,
-                    border: Border.all(color: tc.limeBorder, width: 2),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.marginMobile,
+                    AppSpacing.marginMobile,
+                    AppSpacing.marginMobile,
+                    AppSpacing.base,
                   ),
-                  child: Icon(Icons.person_rounded, color: tc.lime, size: 30),
+                  children: [
+                    ProfileSectionLabel(label: 'General', tc: tc),
+                    ProfileSettingsCard(
+                      tc: tc,
+                      children: [
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            icon: isDark
+                                ? Icons.dark_mode_outlined
+                                : Icons.light_mode_outlined,
+                          ),
+                          title: 'Appearance',
+                          subtitle: isDark ? 'Dark theme' : 'Light theme',
+                          onTap: () => toggleProfileTheme(context),
+                          trailing: Switch.adaptive(
+                            value: isDark,
+                            onChanged: (_) => toggleProfileTheme(context),
+                            activeThumbColor: tc.background,
+                            activeTrackColor: tc.lime,
+                            inactiveThumbColor: tc.text40,
+                            inactiveTrackColor: tc.surface3,
+                          ),
+                        ),
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            icon: Icons.person_outline_rounded,
+                          ),
+                          title: 'Profile',
+                          subtitle: 'View and edit your details',
+                          onTap: () => _navigate(const Profile()),
+                        ),
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            icon: Icons.verified_user_outlined,
+                          ),
+                          title: 'Privacy & security',
+                          subtitle: 'Password and active sessions',
+                          onTap: () => _navigate(const SecurityPage()),
+                        ),
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            icon: Icons.help_outline_rounded,
+                          ),
+                          title: 'Help & support',
+                          subtitle: 'Get answers or reach us',
+                          onTap: () => _navigate(const SupportPage()),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ProfileSectionLabel(label: 'Advanced', tc: tc),
+                    ProfileSettingsCard(
+                      tc: tc,
+                      children: [
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            text: _store.countryFlag,
+                          ),
+                          title: 'Country',
+                          subtitle: 'Shown on your profile',
+                          value: _store.hasCountry ? _store.country : 'Not set',
+                          busy: _store.isSavingConfig,
+                          onTap: () => _openAfterClose(showProfileCountryPicker),
+                        ),
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            text: _store.currencySymbol,
+                          ),
+                          title: 'Currency',
+                          subtitle: 'Symbol only — amounts are not converted',
+                          value:
+                              '${_store.currencyCode} · ${_store.currencySymbol}',
+                          busy: _store.isSavingConfig,
+                          onTap: () =>
+                              _openAfterClose(showProfileCurrencyPicker),
+                        ),
+                        ProfileSettingsRow(
+                          tc: tc,
+                          leading: ProfileIconBadge(
+                            tc: tc,
+                            icon: Icons.delete_outline_rounded,
+                            danger: true,
+                          ),
+                          title: 'Delete account',
+                          subtitle: 'Deactivated now, removed after 30 days',
+                          danger: true,
+                          onTap: () => _openAfterClose(showDeleteAccountSheet),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(store.name,
-                        style: TextStyle(color: tc.text100, fontSize: 16, fontWeight: FontWeight.w700),
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text(store.email,
-                        style: TextStyle(color: tc.text40, fontSize: 12),
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: tc.limeDim,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: tc.limeBorder)),
-                      child: Text('Premium', style: TextStyle(color: tc.lime, fontSize: 10, fontWeight: FontWeight.w600)),
-                    ),
-                  ]),
-                ),
-              ]),
-            ),
-
-            // ── Menu items ───────────────────────────────────────────────
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                    child: Text('SETTINGS',
-                        style: TextStyle(color: tc.text40, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
-                  ),
-
-                  _SettingsGroup(tc: tc, items: [
-                    // Dark/Light mode toggle
-                    _ThemeToggleItem(isDark: isDark, tc: tc),
-
-                    // Profile → navigates to Profile page (same)
-                    _SettingsItem(
-                      icon: Icons.person_outline_rounded,
-                      label: 'Profile',
-                      tc: tc,
-                      onTap: () => _navigate(context, const Profile()),
-                    ),
-
-                    // Currency picker
-                    _SettingsItem(
-                      icon: Icons.currency_exchange_rounded,
-                      label: 'Currency',
-                      trailing: '${currency.symbol} ${currency.code}',
-                      tc: tc,
-                      onTap: () => _showCurrencyPicker(context, tc),
-                    ),
-
-                    // Privacy & Security
-                    _SettingsItem(
-                      icon: Icons.lock_outline_rounded,
-                      label: 'Privacy & Security',
-                      tc: tc,
-                      onTap: () => _navigate(context, const SecurityPage()),
-                    ),
-
-                    // Help & Support
-                    _SettingsItem(
-                      icon: Icons.help_outline_rounded,
-                      label: 'Help & Support',
-                      tc: tc,
-                      onTap: () => _navigate(context, const SupportPage()),
-                    ),
-                  ]),
-                  const SizedBox(height: 16),
-                ],
               ),
-            ),
-
-            // ── Logout ───────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: _LogoutButton(tc: tc),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.marginMobile,
+                  AppSpacing.base,
+                  AppSpacing.marginMobile,
+                  AppSpacing.marginMobile,
+                ),
+                child: _LogoutButton(tc: tc),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+/// Identity block: avatar, name, email and the country/currency the app renders
+/// with. While the profile is in flight it shows a progress line instead of the
+/// signed-out placeholder, and offers a retry if the call failed.
+class _DrawerHeader extends StatelessWidget {
+  const _DrawerHeader({
+    required this.store,
+    required this.tc,
+    required this.failed,
+    required this.onRetry,
+  });
+
+  final UserProfileStore store;
+  final ThemeColors tc;
+  final bool failed;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final loaded = store.isLoaded;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.marginMobile,
+        MediaQuery.of(context).padding.top + AppSpacing.marginMobile,
+        AppSpacing.marginMobile,
+        AppSpacing.marginMobile,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [tc.cardGradientStart, tc.cardGradientEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border(bottom: BorderSide(color: tc.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ProfileAvatar(
+                name: loaded ? store.name : '',
+                tc: tc,
+                size: 52,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loaded
+                          ? store.name
+                          : (failed
+                              ? 'Profile unavailable'
+                              : 'Loading your profile…'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.headlineMd.copyWith(
+                        color: loaded ? tc.text100 : tc.text70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      loaded
+                          ? store.email
+                          : (failed
+                              ? 'Tap retry to try again'
+                              : 'Fetching account details'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm.copyWith(
+                        color: tc.text40,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!loaded)
+                IconButton(
+                  onPressed: failed ? onRetry : null,
+                  tooltip: 'Retry',
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    size: 18,
+                    color: failed ? tc.lime : tc.text20,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (loaded)
+            Wrap(
+              spacing: AppSpacing.base,
+              runSpacing: AppSpacing.base,
+              children: [
+                if (store.isLeader)
+                  ProfilePill(
+                    tc: tc,
+                    label: 'Leader',
+                    icon: Icons.workspace_premium_rounded,
+                  ),
+                ProfilePill(
+                  tc: tc,
+                  label: store.hasCountry ? store.country : 'Country not set',
+                  emoji: store.countryFlag,
+                  muted: !store.hasCountry,
+                ),
+                ProfilePill(
+                  tc: tc,
+                  label: '${store.currencyCode} · ${store.currencySymbol}',
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.6,
+                    color: failed ? tc.red : tc.lime,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.base),
+                Text(
+                  failed
+                      ? 'Could not load your profile'
+                      : 'Syncing your country and currency',
+                  style: AppTypography.bodySm.copyWith(
+                    color: tc.text40,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
@@ -243,194 +457,4 @@ class _LogoutButtonState extends State<_LogoutButton> {
       ),
     );
   }
-}
-
-// ── Currency picker sheet ─────────────────────────────────────────────────────
-class _CurrencyPickerSheet extends StatefulWidget {
-  const _CurrencyPickerSheet({required this.tc, required this.store});
-  final ThemeColors tc;
-  final UserProfileStore store;
-
-  @override
-  State<_CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
-}
-
-class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
-  late Currency _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.store.selectedCurrency;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tc = widget.tc;
-    return Container(
-      decoration: BoxDecoration(
-          color: tc.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 12),
-        Center(
-          child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: tc.text20, borderRadius: BorderRadius.circular(4))),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text('Select Currency',
-              style: TextStyle(color: tc.text100, fontSize: 18, fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(height: 12),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.55),
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            itemCount: currencies.length,
-            separatorBuilder: (_, _) => Divider(height: 1, color: tc.border),
-            itemBuilder: (_, i) {
-              final c = currencies[i];
-              final isSelected = c.code == _selected.code;
-              return ListTile(
-                onTap: () {
-                  setState(() => _selected = c);
-                  widget.store.setCurrency(c);
-                  Navigator.pop(context);
-                },
-                leading: Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    color: isSelected ? tc.limeDim : tc.surface2,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: isSelected ? tc.limeBorder : tc.border),
-                  ),
-                  child: Center(
-                    child: Text(c.symbol,
-                        style: TextStyle(color: isSelected ? tc.lime : tc.text70, fontSize: 16, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                title: Text(c.name, style: TextStyle(color: tc.text100, fontSize: 14)),
-                subtitle: Text(c.code, style: TextStyle(color: tc.text40, fontSize: 12)),
-                trailing: isSelected
-                    ? Icon(Icons.check_circle_rounded, color: tc.lime, size: 20)
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-      ]),
-    );
-  }
-}
-
-// ── Theme toggle ──────────────────────────────────────────────────────────────
-class _ThemeToggleItem extends StatelessWidget {
-  const _ThemeToggleItem({required this.isDark, required this.tc});
-  final bool isDark;
-  final ThemeColors tc;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(children: [
-        Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-            color: tc.text70, size: 20),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(isDark ? 'Dark Mode' : 'Light Mode',
-              style: TextStyle(color: tc.text100, fontSize: 14)),
-        ),
-        GestureDetector(
-          onTap: () => ThemeNotifier().toggle(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            width: 48, height: 26,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: isDark ? tc.lime.withValues(alpha: 0.85) : tc.text20,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 20, height: 20,
-                decoration: BoxDecoration(
-                  color: isDark ? tc.background : Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-// ── Settings group ────────────────────────────────────────────────────────────
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.items, required this.tc});
-  final List<Widget> items;
-  final ThemeColors tc;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: tc.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: tc.border),
-        ),
-        child: Column(
-          children: items.asMap().entries.map((e) {
-            final isLast = e.key == items.length - 1;
-            return Column(children: [
-              e.value,
-              if (!isLast) Divider(height: 1, color: tc.border, indent: 52),
-            ]);
-          }).toList(),
-        ),
-      );
-}
-
-// ── Settings item ─────────────────────────────────────────────────────────────
-class _SettingsItem extends StatelessWidget {
-  const _SettingsItem({
-    required this.icon,
-    required this.label,
-    required this.tc,
-    this.trailing,
-    this.onTap,
-  });
-  final IconData icon;
-  final String label;
-  final ThemeColors tc;
-  final String? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(children: [
-            Icon(icon, color: tc.text70, size: 20),
-            const SizedBox(width: 14),
-            Expanded(child: Text(label, style: TextStyle(color: tc.text100, fontSize: 14))),
-            if (trailing != null)
-              Text(trailing!, style: TextStyle(color: tc.text40, fontSize: 13)),
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right_rounded, color: tc.text20, size: 18),
-          ]),
-        ),
-      );
 }

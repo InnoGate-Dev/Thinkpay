@@ -410,7 +410,7 @@ class _TransactionEditSheetState extends State<TransactionEditSheet> {
               child: Row(
                 children: [
                   Text(
-                    kDefaultCurrencySymbol,
+                    activeCurrencySymbol,
                     style: AppTypography.bodyMd.copyWith(color: tc.text40),
                   ),
                   const SizedBox(width: AppSpacing.base),

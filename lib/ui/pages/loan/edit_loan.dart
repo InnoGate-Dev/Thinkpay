@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 
 import '../../../model/loan_model.dart';
 import '../../../services/loan_service.dart';
@@ -173,7 +174,7 @@ class _EditLoanDialogState extends State<EditLoanDialog> {
                       tc,
                       _amountCtrl,
                       hint: '0.00',
-                      prefix: 'Rs. ',
+                      prefix: '$activeCurrencySymbol ',
                       keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                       validator: _reqNumber,
@@ -226,7 +227,7 @@ class _EditLoanDialogState extends State<EditLoanDialog> {
                       tc,
                       _paymentCtrl,
                       hint: '0.00',
-                      prefix: 'Rs. ',
+                      prefix: '$activeCurrencySymbol ',
                       keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                       validator: _reqNumber,

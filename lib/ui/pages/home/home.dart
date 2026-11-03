@@ -468,23 +468,23 @@ class _FinancialInsightCard extends StatelessWidget {
       final savingsRate = (((income - expenses) / income) * 100).clamp(-100.0, 100.0);
       if (savingsRate >= 20) {
         insightTitle = 'Healthy Savings (${savingsRate.toStringAsFixed(0)}%)';
-        insightBody = 'You saved Rs. ${formatAmount(income - expenses)} from your total income this period. Great progress!';
+        insightBody = 'You saved ${formatAmount(income - expenses)} from your total income this period. Great progress!';
         insightIcon = Icons.thumb_up_alt_rounded;
         accentColor = tc.coreAction;
       } else if (savingsRate > 0) {
         insightTitle = 'Moderate Savings (${savingsRate.toStringAsFixed(0)}%)';
-        insightBody = 'You saved Rs. ${formatAmount(income - expenses)}. Try reducing top category expenses to reach 20%+ savings.';
+        insightBody = 'You saved ${formatAmount(income - expenses)}. Try reducing top category expenses to reach 20%+ savings.';
         insightIcon = Icons.trending_up_rounded;
         accentColor = const Color(0xFFF59E0B);
       } else {
         insightTitle = 'Expenses Exceed Income';
-        insightBody = 'Your expenses (Rs. ${formatAmount(expenses)}) exceed income (Rs. ${formatAmount(income)}). Check your monthly budget.';
+        insightBody = 'Your expenses (${formatAmount(expenses)}) exceed income (${formatAmount(income)}). Check your monthly budget.';
         insightIcon = Icons.warning_amber_rounded;
         accentColor = tc.accentExpense;
       }
     } else if (expenses > 0) {
       insightTitle = 'Expense Tracking';
-      insightBody = 'Total recorded expenses: Rs. ${formatAmount(expenses)}. Record your income to view savings rate insights.';
+      insightBody = 'Total recorded expenses: ${formatAmount(expenses)}. Record your income to view savings rate insights.';
       insightIcon = Icons.receipt_long_rounded;
       accentColor = tc.accentExpense;
     }
@@ -613,7 +613,7 @@ class _FinancialInsightCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Rs. ${formatAmount(topCategoryAmount)}',
+                    formatAmount(topCategoryAmount),
                     style: GoogleFonts.manrope(
                       color: tc.text100,
                       fontSize: 12,
@@ -786,7 +786,7 @@ class _HomeGoalsSection extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Saved: Rs. ${formatAmount(goal.savedAmount)}',
+                                'Saved: ${formatAmount(goal.savedAmount)}',
                                 style: GoogleFonts.inter(
                                   color: tc.text70,
                                   fontSize: 10,
@@ -794,7 +794,7 @@ class _HomeGoalsSection extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Target: Rs. ${formatAmount(goal.targetAmount)}',
+                                'Target: ${formatAmount(goal.targetAmount)}',
                                 style: GoogleFonts.inter(
                                   color: tc.text40,
                                   fontSize: 10,

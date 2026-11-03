@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:Thinkpay/core/constant/app_colors.dart';
+import 'package:Thinkpay/core/utils/number_format.dart';
 
 import '../../../core/errors/exceptions.dart';
 import '../../../model/credit_card_model.dart';
@@ -220,10 +221,10 @@ class _AddCreditCardFormState extends State<AddCreditCardForm> {
             const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalFormatter],
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Card limit',
               hintText: '100000',
-              prefixText: 'Rs. ',
+              prefixText: '$activeCurrencySymbol ',
             ),
             validator: _validateLimit,
           ),

@@ -10,6 +10,7 @@ import 'package:Thinkpay/ui/pages/home/drawersection.dart';
 
 import '../pages/finance/finacedashboard.dart';
 import '../pages/loan/loan_hub_page.dart';
+import '../../providers/profile_sync.dart';
 
 /// Set to `true` when the home drawer is open so AppShell can hide the nav bar.
 final drawerOpenNotifier = ValueNotifier<bool>(false);
@@ -50,6 +51,11 @@ class _AppShellState extends State<AppShell>
     // The notifier is global, so it can outlive a previous shell (e.g. logging
     // out while the drawer was open). Always start with the nav bar visible.
     drawerOpenNotifier.value = false;
+
+    // The shell is the first thing signed-in users see, and the home greeting
+    // plus the drawer header both read the profile store. Load it once here so
+    // neither can paint the signed-out placeholder.
+    ProfileSync.ensureLoaded();
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(

@@ -6,7 +6,17 @@ class AuthResponse {
   final DateTime? expiresAt;
   final User? user;
 
-  AuthResponse({required this.token, this.expiresAt, this.user});
+  /// True when this sign-in cancelled a scheduled deletion: the profile had
+  /// been deactivated by `DELETE /users/me` and the backend just reactivated
+  /// it, so the app should welcome the user back.
+  final bool deletionCancelled;
+
+  AuthResponse({
+    required this.token,
+    this.expiresAt,
+    this.user,
+    this.deletionCancelled = false,
+  });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     final payload = (json.containsKey('data') && json['data'] is Map<String, dynamic>)
@@ -21,6 +31,7 @@ class AuthResponse {
       user: payload['user'] != null && payload['user'] is Map<String, dynamic>
           ? User.fromJson(payload['user'] as Map<String, dynamic>)
           : null,
+      deletionCancelled: payload['deletion_cancelled'] == true,
     );
   }
 
@@ -29,6 +40,7 @@ class AuthResponse {
       'token': token,
       'expires_at': expiresAt?.toIso8601String(),
       if (user != null) 'user': user!.toJson(),
+      if (deletionCancelled) 'deletion_cancelled': true,
     };
   }
 }

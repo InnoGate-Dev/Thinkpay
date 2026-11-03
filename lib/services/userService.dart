@@ -39,4 +39,27 @@ class UserService {
     };
     return await _apiClient.put(ApiEndpoints.upgradeToLeader, data: data) as Map<String, dynamic>;
   }
+
+  /// Stores the preferences of the profile (`profile_config`): country,
+  /// currency and theme.
+  ///
+  /// Each value is optional — an omitted field keeps what is already stored, so
+  /// toggling the theme cannot reset the currency. Changing the currency never
+  /// converts amounts, it only changes the symbol.
+  Future<Map<String, dynamic>> updateProfileConfig({
+    String country = '',
+    String currency = '',
+    String theme = '',
+  }) async => await _apiClient.put(
+        ApiEndpoints.profileConfig,
+        data: {
+          if (country.isNotEmpty) 'country': country,
+          if (currency.isNotEmpty) 'currency': currency,
+          if (theme.isNotEmpty) 'theme': theme,
+        },
+      ) as Map<String, dynamic>;
+
+  /// Deactivates the account and schedules its permanent deletion.
+  Future<Map<String, dynamic>> deleteAccount() async =>
+      await _apiClient.delete(ApiEndpoints.currentUser) as Map<String, dynamic>;
 }
