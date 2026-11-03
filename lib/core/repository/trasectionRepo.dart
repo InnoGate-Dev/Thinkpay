@@ -1,3 +1,4 @@
+import '../../model/categoryModel.dart';
 import '../../model/transaction_model.dart';
 import '../../services/trasectionService.dart';
 import '../../core/constant/app_config.dart';
@@ -90,7 +91,26 @@ class ApiTransaction {
       amount: amount,
       type: type,
       date: date,
+      categoryId: categoryId > 0 ? categoryId : null,
     );
+  }
+}
+
+/// Maps raw API rows to the UI model while restoring their category names.
+///
+/// `GET /transactions` only carries `category_id`, so callers that already hold
+/// the category list can resolve the display name here instead of letting every
+/// row collapse onto a generic `EXPENSE` / `INCOME` label.
+extension ApiTransactionMapping on List<ApiTransaction> {
+  List<TransactionModel> toLocalModels(Iterable<Category> categories) {
+    final names = <int, String>{
+      for (final c in categories)
+        if (c.name.trim().isNotEmpty) c.id: c.name.trim(),
+    };
+    return [
+      for (final t in this)
+        t.toLocalModel(fallbackCategory: names[t.categoryId]),
+    ];
   }
 }
 
@@ -137,10 +157,13 @@ class TransactionRepository {
   }
 
   /// Returns all transactions converted to the local [TransactionModel]
-  /// format used by [FinanceProvider].
-  Future<List<TransactionModel>> getTransactionsAsLocalModels() async {
+  /// format used by [FinanceProvider]. Pass [categories] when they are already
+  /// loaded so each row keeps its real category name.
+  Future<List<TransactionModel>> getTransactionsAsLocalModels({
+    Iterable<Category> categories = const <Category>[],
+  }) async {
     final apiTransactions = await getTransactions();
-    return apiTransactions.map((t) => t.toLocalModel()).toList();
+    return apiTransactions.toLocalModels(categories);
   }
 
   /// Fetches a single transaction by its [id].

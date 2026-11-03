@@ -53,14 +53,15 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final results = await Future.wait([
         _categoryRepo.getCategories().catchError((_) => <Category>[]),
-        _transactionRepo.getTransactionsAsLocalModels().catchError((_) => <TransactionModel>[]),
+        _transactionRepo.getTransactions().catchError((_) => const <ApiTransaction>[]),
         _goalRepo.getGoals().catchError((_) => <GoalModel>[]),
         _loanService.fetchLoans().catchError((_) => <LoanModel>[]),
         NotificationStore().fetchNotifications().catchError((_) {}),
       ]);
 
       final categories = results[0] as List<Category>;
-      final transactions = results[1] as List<TransactionModel>;
+      final transactions = (results[1] as List<ApiTransaction>)
+          .toLocalModels(categories);
       final goals = results[2] as List<GoalModel>;
       final loans = results[3] as List<LoanModel>;
 
@@ -88,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddTransactionSheet(),
-    );
+    ).then((_) => _loadData()); // Reload so totals and category actuals settle
   }
 
   Future<void> _openLoanDetail(LoanModel loan) async {

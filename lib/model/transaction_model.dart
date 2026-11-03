@@ -50,6 +50,11 @@ class TransactionModel {
   final DateTime date;
   final String? notes;
 
+  /// Backend category id this transaction belongs to (null for rows that only
+  /// exist locally, e.g. goal/loan transfers). Lets the budget list update the
+  /// exact category instead of guessing by display name.
+  final int? categoryId;
+
   TransactionModel({
     required this.id,
     required this.category,
@@ -57,6 +62,7 @@ class TransactionModel {
     required this.type,
     required this.date,
     this.notes,
+    this.categoryId,
   });
 
   TransactionModel copyWith({
@@ -67,6 +73,7 @@ class TransactionModel {
     TransactionType? type,
     DateTime? date,
     String? notes,
+    int? categoryId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -75,6 +82,7 @@ class TransactionModel {
       type: type ?? this.type,
       date: date ?? this.date,
       notes: notes ?? this.notes,
+      categoryId: categoryId ?? this.categoryId,
     );
   }
 }

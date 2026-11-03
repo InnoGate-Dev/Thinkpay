@@ -24,12 +24,15 @@ enum CategoryType {
   }
 
   /// Converts [CategoryType] to the corresponding UI [TransactionType].
+  ///
+  /// Transfer buckets keep their transfer flavour so the Budget screen can list
+  /// them under its own Transfers tab instead of mixing them into Expenses.
   TransactionType toTransactionType() {
     switch (this) {
       case CategoryType.income: return TransactionType.income;
       case CategoryType.expense: return TransactionType.expense;
-      case CategoryType.transferIn: return TransactionType.income;
-      case CategoryType.transferOut: return TransactionType.expense;
+      case CategoryType.transferIn: return TransactionType.transferIn;
+      case CategoryType.transferOut: return TransactionType.transferOut;
       case CategoryType.otherIn: return TransactionType.otherIn;
       case CategoryType.otherOut: return TransactionType.otherOut;
     }

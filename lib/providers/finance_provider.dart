@@ -53,15 +53,18 @@ class FinanceProvider extends ChangeNotifier {
 
   Map<String, double> get transferByCategory {
     final map = <String, double>{};
-    for (final t in _transactions.where((t) => t.type == TransactionType.income || t.type == TransactionType.expense)) {
+    for (final t in _transactions.where(_isTransfer)) {
       map[t.category] = (map[t.category] ?? 0) + t.amount;
     }
     return map;
   }
 
   double get totalTransfers =>
-      _transactions.where((t) => t.type == TransactionType.income || t.type == TransactionType.expense)
-          .fold(0, (s, t) => s + t.amount);
+      _transactions.where(_isTransfer).fold(0, (s, t) => s + t.amount);
+
+  static bool _isTransfer(TransactionModel t) =>
+      t.type == TransactionType.transferIn ||
+      t.type == TransactionType.transferOut;
 
   List<TransactionModel> get recentTransactions =>
       _transactions.take(5).toList();
@@ -83,7 +86,9 @@ class FinanceProvider extends ChangeNotifier {
   /// Names of budget categories for transfer type (used by transaction picker).
   List<String> get transferBudgetCategories =>
       _budgets
-          .where((b) => b.type == TransactionType.income || b.type == TransactionType.expense)
+          .where((b) =>
+              b.type == TransactionType.transferIn ||
+              b.type == TransactionType.transferOut)
           .map((b) => b.name)
           .toList();
 
@@ -94,13 +99,46 @@ class FinanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Adds [t] to the ledger and rolls its amount into the matching budget
+  /// category, so the "actual" progress bars react immediately after the
+  /// create call succeeds (the backend already applied the same change).
   void addTransaction(TransactionModel t) {
     _transactions.insert(0, t);
+    applyTransactionToCategory(t);
     notifyListeners();
   }
 
+  /// Adds [amount] to the budget category [t] belongs to.
+  ///
+  /// Matching prefers the backend [TransactionModel.categoryId]; rows without an
+  /// id (locally built transfer entries) fall back to name + type.
+  void applyTransactionToCategory(TransactionModel t) =>
+      _applyCategoryDelta(t, t.amount);
+
+  /// Moves the matching budget category's actual total by [delta].
+  void _applyCategoryDelta(TransactionModel t, double delta) {
+    var index = -1;
+    final categoryId = t.categoryId;
+    if (categoryId != null) {
+      index = _budgets.indexWhere((b) => b.id == categoryId);
+    }
+    if (index == -1) {
+      index = _budgets.indexWhere(
+        (b) => b.name == t.category && b.type == t.type,
+      );
+    }
+    if (index == -1) return;
+    final budget = _budgets[index];
+    final next = budget.actualAmount + delta;
+    _budgets[index] = budget.copyWith(actualAmount: next < 0 ? 0 : next);
+  }
+
   void deleteTransaction(String id) {
-    _transactions.removeWhere((t) => t.id == id);
+    final index = _transactions.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      final removed = _transactions.removeAt(index);
+      _applyCategoryDelta(removed, -removed.amount);
+    }
     notifyListeners();
   }
 

@@ -103,6 +103,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     return FinanceProvider().expenseBudgetCategories;
   }
 
+  /// Resolves the selected dropdown label back to its budget entry.
+  ///
+  /// The name alone is not enough: income and expense buckets can share a
+  /// label, so the type has to match as well.
+  BudgetCategory? _findSelectedCategory() {
+    for (final b in FinanceProvider().budgets) {
+      if (b.name == _category && b.type == _type) return b;
+    }
+    return null;
+  }
+
   /// Fetches goals and loans for the Transfer destination picker.
   Future<void> _fetchTransferTargets() async {
     setState(() => _loadingTransferTargets = true);
@@ -224,15 +235,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
 
     final budgets = FinanceProvider().budgets;
-    final matchingCategory = budgets.firstWhere(
-      (b) => b.name == _category,
-      orElse: () => BudgetCategory(
-        id: 0,
-        name: _category!,
-        expectedAmount: 0,
-        type: _type,
-      ),
-    );
+    var matchingCategory = _findSelectedCategory();
+    // The cached budget list can be stale (e.g. a category created on another
+    // screen), so refetch once before failing the submit.
+    if (matchingCategory == null && budgets.isEmpty) {
+      await _fetchCategories();
+      matchingCategory = _findSelectedCategory();
+    }
+    if (matchingCategory == null || matchingCategory.id <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Category "$_category" is no longer available.'),
+          backgroundColor: ThemeColors.of(context).red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _submitting = true);
 
@@ -246,8 +265,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         notes: note,
       );
 
+      // Adds the row to the ledger and rolls the amount into the matching
+      // budget category so its "actual" progress updates immediately.
       FinanceProvider().addTransaction(
-        createdApiTx.toLocalModel(fallbackCategory: _category),
+        createdApiTx.toLocalModel(fallbackCategory: matchingCategory.name),
       );
 
       if (mounted) Navigator.pop(context);

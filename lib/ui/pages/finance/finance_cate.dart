@@ -62,19 +62,21 @@ class _FinancePageState extends State<FinancePage>
     try {
       final results = await Future.wait([
         _categoryRepo.getCategories(),
-        _transactionRepo.getTransactionsAsLocalModels(),
+        _transactionRepo.getTransactions(),
         _goalRepo.getGoals(),
         _loanRepo.getLoans(),
       ]);
       final categories = results[0] as List<Category>;
-      final transactions = results[1] as List<TransactionModel>;
+      final apiTransactions = results[1] as List<ApiTransaction>;
       final goals = results[2] as List<GoalModel>;
       final loans = results[3] as List<LoanModel>;
 
       _provider.setBudgetCategories(
         categories.map((c) => c.toBudgetCategory()).toList(),
       );
-      _provider.setTransactions(transactions);
+      // Transactions only carry `category_id`; resolve the names so the
+      // breakdown groups by real category instead of the transaction type.
+      _provider.setTransactions(apiTransactions.toLocalModels(categories));
       _provider.setGoals(goals);
 
       if (mounted) {
@@ -152,49 +154,21 @@ class _FinancePageState extends State<FinancePage>
                 b.type == TransactionType.transferOut)
             .toList();
 
-        final expActual = _provider.expenseByCategory;
-        final incActual = _provider.incomeByCategory;
-        // NOTE: if `transferByCategory` doesn't exist on FinanceProvider yet,
-        // add a getter that mirrors expenseByCategory/incomeByCategory but
-        // filters transactions where type == TransactionType.transferIn or transferOut and
-        // groups/sums by category name.
-        final trfActual = _provider.transferByCategory;
+        final expActual = _resolveActuals(expBudgets, _provider.expenseByCategory);
+        final incActual = _resolveActuals(incBudgets, _provider.incomeByCategory);
+        final trfActual = _resolveActuals(trfBudgets, _provider.transferByCategory);
 
         // ── Pie sections — Expenses ──────────────────────────────────────────
-        final expCats = expActual.entries.toList();
-        final expPieSections = <PieChartSectionData>[
-          for (int i = 0; i < expCats.length; i++)
-            PieChartSectionData(
-              value: expCats[i].value,
-              color: AppColors.chart[i % AppColors.chart.length],
-              title: '',
-              radius: 44,
-            ),
-        ];
+        final expCats = _pieEntries(expActual);
+        final expPieSections = _pieSections(expCats);
 
         // ── Pie sections — Income ────────────────────────────────────────────
-        final incCats = incActual.entries.toList();
-        final incPieSections = <PieChartSectionData>[
-          for (int i = 0; i < incCats.length; i++)
-            PieChartSectionData(
-              value: incCats[i].value,
-              color: AppColors.chart[i % AppColors.chart.length],
-              title: '',
-              radius: 44,
-            ),
-        ];
+        final incCats = _pieEntries(incActual);
+        final incPieSections = _pieSections(incCats);
 
         // ── Pie sections — Transfers ─────────────────────────────────────────
-        final trfCats = trfActual.entries.toList();
-        final trfPieSections = <PieChartSectionData>[
-          for (int i = 0; i < trfCats.length; i++)
-            PieChartSectionData(
-              value: trfCats[i].value,
-              color: AppColors.chart[i % AppColors.chart.length],
-              title: '',
-              radius: 44,
-            ),
-        ];
+        final trfCats = _pieEntries(trfActual);
+        final trfPieSections = _pieSections(trfCats);
 
         return Scaffold(
           backgroundColor: tc.background,
@@ -415,6 +389,12 @@ class _FinanceTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // The donut legend sits in a fixed-height card, so only the largest few
+    // categories get a row; the rest are summarised by a "+N more" entry.
+    const maxLegendRows = 5;
+    final legendLabels = catLabels.take(maxLegendRows).toList();
+    final hiddenLegendCount = catLabels.length - legendLabels.length;
+
     // Build virtual BudgetCategory entries for goals (Transfer tab only).
     final List<_VirtualTransferItem> virtualItems = [];
     if (type == TransactionType.transferOut) {
@@ -517,7 +497,9 @@ class _FinanceTab extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    'categories',
+                                    pieSections.length == 1
+                                        ? 'category'
+                                        : 'categories',
                                     style: GoogleFonts.inter(
                                       color: tc.text40,
                                       fontSize: 10,
@@ -532,33 +514,45 @@ class _FinanceTab extends StatelessWidget {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: List.generate(
-                            catLabels.length,
-                                (i) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: AppColors
-                                          .chart[i % AppColors.chart.length],
-                                      borderRadius: BorderRadius.circular(2),
+                          children: [
+                            for (int i = 0; i < legendLabels.length; i++)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.chart[
+                                            i % AppColors.chart.length],
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    catLabels[i],
-                                    style: GoogleFonts.inter(
-                                      color: tc.text70,
-                                      fontSize: 12,
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      legendLabels[i],
+                                      style: GoogleFonts.inter(
+                                        color: tc.text70,
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ),
+                            if (hiddenLegendCount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '+$hiddenLegendCount more',
+                                  style: GoogleFonts.inter(
+                                    color: tc.text40,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -623,9 +617,7 @@ class _FinanceTab extends StatelessWidget {
           ...budgets.map(
                 (b) => _FinanceCard(
               b: b,
-              actual: (actualMap[b.name] != null && actualMap[b.name]! > 0)
-                  ? actualMap[b.name]!
-                  : b.actualAmount,
+              actual: actualMap[b.name] ?? b.actualAmount,
               accentColor: accentColor,
               onDelete: onDelete,
               tc: tc,
@@ -712,8 +704,11 @@ class _FinanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final expected = b.expectedAmount;
-    final pct = expected > 0 ? (actual / expected).clamp(0.0, 1.0) : 0.0;
-    final over = actual > expected;
+    // Without a planned amount there is no ratio to draw, so the bar stays empty
+    // and the card shows the running total only instead of a misleading 100%.
+    final hasTarget = expected > 0;
+    final pct = hasTarget ? (actual / expected).clamp(0.0, 1.0) : 0.0;
+    final over = hasTarget && actual > expected;
     final bar = over ? tc.accentExpense : accentColor;
 
     return Container(
@@ -844,7 +839,7 @@ class _FinanceCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  '${(pct * 100).toStringAsFixed(0)}%',
+                  hasTarget ? '${(pct * 100).toStringAsFixed(0)}%' : '—',
                   style: GoogleFonts.manrope(
                     color: bar,
                     fontSize: 12,
@@ -867,7 +862,7 @@ class _FinanceCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'of Rs. ${_fmt(expected)}',
+                  hasTarget ? 'of Rs. ${_fmt(expected)}' : 'no planned amount',
                   style: GoogleFonts.inter(color: tc.text40, fontSize: 12),
                 ),
               ],
@@ -1059,10 +1054,7 @@ class _SummaryRow extends StatelessWidget {
     );
     final totalActual = budgets.fold<double>(
       0,
-          (s, b) {
-        final val = actualMap[b.name];
-        return s + ((val != null && val > 0) ? val : b.actualAmount);
-      },
+          (s, b) => s + (actualMap[b.name] ?? b.actualAmount),
     );
 
     return Container(
@@ -1159,3 +1151,40 @@ class _SummaryRow extends StatelessWidget {
 }
 
 String _fmt(double v) => compactNumber(v);
+
+/// Resolves the "actual" figure shown for every category in [budgets].
+///
+/// The server-maintained `actual_amount` is the source of truth because the
+/// transaction endpoint is paginated (so a client-side sum would only cover the
+/// latest page). [localActuals] is used as a fallback for categories whose
+/// running total is still zero, which keeps the screen useful for accounts whose
+/// historical transactions have not been folded into `actual_amount` yet.
+Map<String, double> _resolveActuals(
+  List<BudgetCategory> budgets,
+  Map<String, double> localActuals,
+) {
+  return {
+    for (final b in budgets)
+      b.name:
+          b.actualAmount > 0 ? b.actualAmount : (localActuals[b.name] ?? 0.0),
+  };
+}
+
+/// Chart entries for [actuals], skipping zero values because a zero-value
+/// section would still claim a colour and a legend row.
+List<MapEntry<String, double>> _pieEntries(Map<String, double> actuals) =>
+    actuals.entries.where((e) => e.value > 0).toList();
+
+/// Builds donut sections in the same order as [entries], so the legend colours
+/// in [_FinanceTab] always match the painted slices.
+List<PieChartSectionData> _pieSections(List<MapEntry<String, double>> entries) {
+  return [
+    for (int i = 0; i < entries.length; i++)
+      PieChartSectionData(
+        value: entries[i].value,
+        color: AppColors.chart[i % AppColors.chart.length],
+        title: '',
+        radius: 44,
+      ),
+  ];
+}

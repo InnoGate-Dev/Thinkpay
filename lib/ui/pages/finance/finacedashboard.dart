@@ -37,10 +37,11 @@ class _FinanceDashboardPageState extends State<FinanceDashboardPage> {
     try {
       final results = await Future.wait([
         _categoryRepo.getCategories(),
-        _transactionRepo.getTransactionsAsLocalModels(),
+        _transactionRepo.getTransactions(),
       ]);
       final categories = results[0] as List<Category>;
-      final transactions = results[1] as List<TransactionModel>;
+      final transactions = (results[1] as List<ApiTransaction>)
+          .toLocalModels(categories);
       _provider.setBudgetCategories(
         categories.map((c) => c.toBudgetCategory()).toList(),
       );
@@ -73,7 +74,7 @@ class _FinanceDashboardPageState extends State<FinanceDashboardPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddTransactionSheet(),
-    );
+    ).then((_) => _load()); // Reload so category actuals match the server
   }
 
   @override
